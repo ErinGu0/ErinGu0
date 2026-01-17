@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Erin Guo Portfolio
 
 A modern, interactive portfolio website built with Next.js, React, and Framer Motion. Features ocean-themed animations, smooth transitions, and a unique scroll-based navigation experience.
@@ -23,3 +24,21 @@ A modern, interactive portfolio website built with Next.js, React, and Framer Mo
 - **Form Handling:** React Hook Form
 
 ## 📁 Project Structure
+=======
+## Hi there 👋
+
+<!--
+**ErinGu0/ErinGu0** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
+
+Here are some ideas to get you started:
+
+- 🔭 I’m currently working on ...
+- 🌱 I’m currently learning ...
+- 👯 I’m looking to collaborate on ...
+- 🤔 I’m looking for help with ...
+- 💬 Ask me about ...
+- 📫 How to reach me: ...
+- 😄 Pronouns: ...
+- ⚡ Fun fact: ...
+-->
+>>>>>>> 2b24832b8a6087816b28dfcabcdb22f042892fef
