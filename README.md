@@ -1,6 +1,8 @@
 ## 🌊 Welcome to Erin Guo’s Website
 
-This is my personal portfolio website – welcome! It showcases my projects, skills, and personality through an ocean-inspired, interactive experience built with a modern web tech stack. [web:1]
+This is my personal portfolio website – welcome! https://erin-gu0.vercel.app/
+
+It showcases my projects, skills, and personality through an ocean-inspired, interactive experience built with a modern web tech stack. 
 
 ## ✨ Overview
 
