@@ -310,9 +310,14 @@ export default function Home() {
       lastTouchY = e.touches[0].clientY;
     };
     const handleTouchMove = (e) => {
+      // Once the wave has crested, stop intercepting touch entirely. The
+      // settle window exists for trackpad momentum, but a finger produces
+      // no phantom events after lifting - any swipe here is the user
+      // deliberately scrolling, and swallowing it (while resetting the
+      // "input quiet" timer each time) made the page feel stuck until the
+      // 2.5s hard cap suddenly released it mid-gesture.
+      if (!introActiveRef.current) return;
       e.preventDefault();
-      lastWheelAtRef.current = performance.now();
-      if (!introActiveRef.current) return; // post-wave settle window: swallow input only
       const currentY = e.touches[0].clientY;
       if (lastTouchY === null) {
         lastTouchY = currentY;
@@ -327,8 +332,14 @@ export default function Home() {
       const delta = Math.max(-60, Math.min(60, deltaY)) * 0.0032;
       targetRef.current = Math.max(0, Math.min(1, targetRef.current + delta));
     };
-    const handleTouchEnd = () => {
+    const handleTouchEnd = (e) => {
       lastTouchY = null;
+      if (!introActiveRef.current || e.touches.length > 0) return;
+      // Commit or abandon the dive when the finger lifts. Wheel input keeps
+      // ticking past the lift so the wave finishes on its own, but a touch
+      // gesture just stops - without this snap, a partial swipe left the
+      // wave hanging mid-screen, which read as a glitch.
+      targetRef.current = targetRef.current > 0.3 ? 1 : 0;
     };
 
     document.body.style.overflow = 'hidden';
@@ -336,6 +347,7 @@ export default function Home() {
     window.addEventListener('touchstart', handleTouchStart, { passive: true });
     window.addEventListener('touchmove', handleTouchMove, { passive: false });
     window.addEventListener('touchend', handleTouchEnd, { passive: true });
+    window.addEventListener('touchcancel', handleTouchEnd, { passive: true });
 
     // Damped-spring integrator (frame-rate independent via dt) instead of a
     // flat per-frame lerp: gives the water actual inertia - it eases into
@@ -371,6 +383,7 @@ export default function Home() {
       window.removeEventListener('touchstart', handleTouchStart);
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('touchend', handleTouchEnd);
+      window.removeEventListener('touchcancel', handleTouchEnd);
       cancelAnimationFrame(rafRef.current);
     };
   }, [scrollLocked]);
