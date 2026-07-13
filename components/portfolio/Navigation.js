@@ -4,7 +4,7 @@ import { Menu, X, Github, Linkedin, Mail } from 'lucide-react';
 
 const navItems = ['Experience', 'Projects', 'About', 'Contact'];
 
-export default function Navigation() {
+export default function Navigation({ onNavigate }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -17,11 +17,19 @@ export default function Navigation() {
   }, []);
 
   const scrollToSection = (id) => {
-    const element = document.getElementById(id.toLowerCase());
+    setMobileMenuOpen(false);
+    const target = id.toLowerCase();
+    // The parent's handler knows how to dismiss the intro wave first if
+    // it's still covering the page; plain scrollIntoView can't scroll a
+    // body that's locked with overflow:hidden.
+    if (onNavigate) {
+      onNavigate(target);
+      return;
+    }
+    const element = document.getElementById(target);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
     }
-    setMobileMenuOpen(false);
   };
 
   return (
@@ -88,7 +96,10 @@ export default function Navigation() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="fixed inset-0 z-40 bg-[#1A6B7A]/95 backdrop-blur-lg pt-20 px-6"
+            // z-[45]: above the intro wave overlay (z-40) so the menu isn't
+            // painted invisibly behind it while the intro is active, but
+            // below the nav bar (z-50) so the X button stays tappable.
+            className="fixed inset-0 z-[45] bg-[#1A6B7A]/95 backdrop-blur-lg pt-20 px-6 overflow-y-auto"
           >
             <div className="flex flex-col items-center gap-6 mt-8">
               {navItems.map((item, i) => (

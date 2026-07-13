@@ -18,7 +18,7 @@ function washState(progress, start, end) {
   };
 }
 
-export default function HeroSection({ wash = 0 }) {
+export default function HeroSection({ wash = 0, onNavigate }) {
   const subtitle = washState(wash, 0, 0.16);
   const name = washState(wash, 0.08, 0.3);
   const desc = washState(wash, 0.2, 0.42);
@@ -30,8 +30,8 @@ export default function HeroSection({ wash = 0 }) {
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       <WaveBackground />
 
-      <div className="relative z-10 max-w-6xl mx-auto px-6 py-20">
-        <div className="flex flex-col lg:flex-row items-center justify-between gap-12">
+      <div className="relative z-10 max-w-6xl mx-auto px-6 py-14 md:py-20">
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-6 lg:gap-12">
           {/* Text content */}
           <div className="text-center lg:text-left flex-1">
             <motion.p
@@ -87,7 +87,11 @@ export default function HeroSection({ wash = 0 }) {
                 View GitHub
               </a>
               <button
-                onClick={() => document.getElementById('contact').scrollIntoView({ behavior: 'smooth' })}
+                onClick={() =>
+                  onNavigate
+                    ? onNavigate('contact')
+                    : document.getElementById('contact').scrollIntoView({ behavior: 'smooth' })
+                }
                 className="px-6 py-3 bg-[#88C5CC]/20 backdrop-blur-sm border border-[#88C5CC]/40 rounded-full text-[#88C5CC] hover:bg-[#88C5CC]/30 transition-all duration-300 hover:scale-105"
               >
                 Get in Touch

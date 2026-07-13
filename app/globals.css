@@ -56,4 +56,14 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Decorative layers (wave overlay sway, drifting creatures, orbiting
+     pills) intentionally bleed past the viewport edges; without this,
+     any of them can open up sideways scrolling on narrow phone screens. */
+  html,
+  body {
+    overflow-x: hidden;
+  }
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
 }

@@ -8,7 +8,7 @@ export default function BubbleCursor() {
     let lastTime = 0;
     const throttleMs = 60;
 
-    const handleMouseMove = (e) => {
+    const spawnBubbles = (clientX, clientY) => {
       const now = Date.now();
       if (now - lastTime < throttleMs) return;
       lastTime = now;
@@ -16,8 +16,8 @@ export default function BubbleCursor() {
       // Create multiple bubbles for more dramatic effect
       const newBubbles = Array.from({ length: 2 }, (_, i) => ({
         id: now + i,
-        x: e.clientX + (Math.random() - 0.5) * 40,
-        y: e.clientY + (Math.random() - 0.5) * 40,
+        x: clientX + (Math.random() - 0.5) * 40,
+        y: clientY + (Math.random() - 0.5) * 40,
         size: Math.random() * 20 + 10,
         hue: 175 + Math.random() * 65, // cyan through aqua-violet range
         drift: (Math.random() - 0.5) * 50,
@@ -27,8 +27,20 @@ export default function BubbleCursor() {
       setBubbles(prev => [...prev.slice(-20), ...newBubbles]);
     };
 
+    const handleMouseMove = (e) => spawnBubbles(e.clientX, e.clientY);
+    // Touch devices have no mousemove stream - trail bubbles behind the
+    // finger instead so mobile gets the same playful effect.
+    const handleTouchMove = (e) => {
+      const touch = e.touches[0];
+      spawnBubbles(touch.clientX, touch.clientY);
+    };
+
     window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('touchmove', handleTouchMove);
+    };
   }, []);
 
   useEffect(() => {

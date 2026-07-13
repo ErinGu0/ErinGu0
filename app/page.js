@@ -299,8 +299,43 @@ export default function Home() {
       targetRef.current = Math.max(0, Math.min(1, targetRef.current + delta));
     };
 
+    // Touch devices never fire wheel events, so without these the wave
+    // could never rise on mobile - the page just sat permanently locked
+    // behind overflow:hidden. Swipe-up (finger moving up = diving down)
+    // drives the same targetRef the wheel does. preventDefault on touchmove
+    // is what actually blocks scrolling on iOS Safari, where body
+    // overflow:hidden alone isn't honored.
+    let lastTouchY = null;
+    const handleTouchStart = (e) => {
+      lastTouchY = e.touches[0].clientY;
+    };
+    const handleTouchMove = (e) => {
+      e.preventDefault();
+      lastWheelAtRef.current = performance.now();
+      if (!introActiveRef.current) return; // post-wave settle window: swallow input only
+      const currentY = e.touches[0].clientY;
+      if (lastTouchY === null) {
+        lastTouchY = currentY;
+        return;
+      }
+      const deltaY = lastTouchY - currentY;
+      lastTouchY = currentY;
+      // Touch deltas arrive per-frame (small), unlike chunky wheel notches,
+      // but a full swipe only spans ~half the screen once - so it needs a
+      // larger multiplier than wheel for one committed swipe to feel like
+      // real progress.
+      const delta = Math.max(-60, Math.min(60, deltaY)) * 0.0032;
+      targetRef.current = Math.max(0, Math.min(1, targetRef.current + delta));
+    };
+    const handleTouchEnd = () => {
+      lastTouchY = null;
+    };
+
     document.body.style.overflow = 'hidden';
     window.addEventListener('wheel', handleWheel, { passive: false });
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
+    window.addEventListener('touchend', handleTouchEnd, { passive: true });
 
     // Damped-spring integrator (frame-rate independent via dt) instead of a
     // flat per-frame lerp: gives the water actual inertia - it eases into
@@ -333,6 +368,9 @@ export default function Home() {
 
     return () => {
       window.removeEventListener('wheel', handleWheel);
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
       cancelAnimationFrame(rafRef.current);
     };
   }, [scrollLocked]);
@@ -397,10 +435,31 @@ export default function Home() {
     };
   }, [introActive]);
 
+  // Nav links (and the hero's "Get in Touch") have to work even while the
+  // intro wave still owns the viewport - especially on mobile, where the
+  // hamburger is the most natural first tap. scrollIntoView is a no-op
+  // while the body is overflow:hidden, so first force-complete the intro
+  // and restore scrolling, then jump to the section once unlocked.
+  const handleNavigate = (id) => {
+    const wasLocked = scrollLocked;
+    if (wasLocked) {
+      targetRef.current = 1;
+      setWaveProgress(1);
+      setIntroActive(false);
+      setContentRevealed(true);
+      setScrollLocked(false);
+      document.body.style.overflow = '';
+    }
+    setTimeout(() => {
+      const element = document.getElementById(id);
+      if (element) element.scrollIntoView({ behavior: 'smooth' });
+    }, wasLocked ? 150 : 0);
+  };
+
   return (
     <div className="min-h-screen bg-[#0D6B82]">
       <BubbleCursor />
-      <Navigation />
+      <Navigation onNavigate={handleNavigate} />
 
       <section id="experience" className="pt-24 pb-32 bg-gradient-to-b from-[#0D6B82] via-[#0A5A6E] to-[#084858]">
         <motion.div
@@ -555,7 +614,7 @@ export default function Home() {
             transition={{ duration: 0.7, ease: [0.6, 0.05, 0.15, 1] }}
           >
             <div className="fixed inset-0 z-10">
-              <HeroSection wash={waveProgress} />
+              <HeroSection wash={waveProgress} onNavigate={handleNavigate} />
             </div>
             <WaveTransitionOverlay progress={waveProgress} complete={waveProgress >= 0.995} />
           </motion.div>

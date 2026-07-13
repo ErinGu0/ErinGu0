@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Megaphone, Waves, Dna, Leaf, Users } from 'lucide-react';
+import { useIsMobile } from '../../hooks/use-mobile';
 
 const traits = [
   { name: 'Advocate', color: '#88C5CC', icon: Megaphone },
@@ -10,17 +11,32 @@ const traits = [
   { name: 'Community Leader', color: '#E8A87C', icon: Users },
 ];
 
+const desktopPositions = [
+  { x: -140, y: -60 },
+  { x: 100, y: -80 },
+  { x: -80, y: 40 },
+  { x: 120, y: 30 },
+  { x: -20, y: 100 },
+];
+
+// Each pill is left-anchored at the container's center point, so on a
+// narrow phone the wide labels shoot off the right edge with the desktop
+// offsets. These keep every pill inside a ~390px viewport (the widest
+// pill, "Underwater Hockey Athlete", needs the most negative x).
+const mobilePositions = [
+  { x: 10, y: -85 },
+  { x: -120, y: -38 },
+  { x: -15, y: 8 },
+  { x: -110, y: 52 },
+  { x: -25, y: 96 },
+];
+
 export default function OrbitingSkills() {
-  const positions = [
-    { x: -140, y: -60 },
-    { x: 100, y: -80 },
-    { x: -80, y: 40 },
-    { x: 120, y: 30 },
-    { x: -20, y: 100 },
-  ];
+  const isMobile = useIsMobile();
+  const positions = isMobile ? mobilePositions : desktopPositions;
 
   return (
-    <div className="relative w-[350px] h-[280px] md:w-[450px] md:h-[320px]">
+    <div className="relative w-[280px] h-[230px] md:w-[450px] md:h-[320px]">
       {traits.map((trait, i) => {
         const pos = positions[i];
         const duration = 5 + (i % 3);
@@ -52,7 +68,7 @@ export default function OrbitingSkills() {
             }}
           >
             <div
-              className="flex items-center gap-2 px-4 py-2 md:px-5 md:py-2.5 rounded-full text-sm md:text-base font-medium whitespace-nowrap backdrop-blur-md border border-white/25 shadow-lg cursor-default"
+              className="flex items-center gap-2 px-3 py-1.5 md:px-5 md:py-2.5 rounded-full text-xs md:text-base font-medium whitespace-nowrap backdrop-blur-md border border-white/25 shadow-lg cursor-default"
               style={{
                 backgroundColor: `${trait.color}15`,
                 color: trait.color,
