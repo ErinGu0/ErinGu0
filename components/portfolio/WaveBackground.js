@@ -1,12 +1,71 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { BrainCircuit, Users, HeartPulse, Accessibility } from 'lucide-react';
+import SeaCreatures from './SeaCreatures';
+
+const socialGoodBadges = [
+  { label: 'Artificial Intelligence for Good', icon: BrainCircuit, left: '54%', top: '72%', duration: 9 },
+  { label: 'Community Impact', icon: Users, left: '82%', top: '68%', duration: 10.5 },
+  { label: 'Healthcare Access', icon: HeartPulse, left: '60%', top: '87%', duration: 8.5 },
+  { label: 'Inclusive Design', icon: Accessibility, left: '88%', top: '85%', duration: 11 }
+];
+
+// Deterministic pseudo-random generator so particle layout is identical on
+// server and client render (Math.random() during render causes a React
+// hydration mismatch since SSR and the client each roll different values).
+function seeded(seed) {
+  // Integer-only PRNG (mulberry32): Math.sin-based hashes aren't guaranteed
+  // bit-identical between the Node SSR pass and the browser's JS engine,
+  // which was still tripping React's hydration mismatch check.
+  let t = (seed + 0x6d2b79f5) | 0;
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
 
 export default function WaveBackground() {
   return (
     <div className="absolute inset-0 overflow-hidden">
       {/* Lighter ocean gradient base to match inspiration */}
       <div className="absolute inset-0 bg-gradient-to-b from-[#1A6B7A] via-[#2A8A9A] to-[#3AA5B5]" />
-      
+
+      {/* Sunlight breaking through the surface - soft glow + god rays */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <motion.div
+          className="absolute -top-40 left-1/2 -translate-x-1/2 w-[1000px] h-[1000px] rounded-full"
+          style={{
+            background: 'radial-gradient(circle, rgba(255,255,255,0.4) 0%, rgba(255,244,214,0.16) 28%, transparent 60%)',
+            filter: 'blur(60px)',
+          }}
+          animate={{ opacity: [0.35, 0.6, 0.35], scale: [1, 1.06, 1] }}
+          transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }}
+        />
+        {[
+          { left: '13%', rotate: -19, width: 100, delay: 0, duration: 11 },
+          { left: '32%', rotate: -8, width: 70, delay: 1.3, duration: 13 },
+          { left: '50%', rotate: 3, width: 115, delay: 0.6, duration: 10 },
+          { left: '68%', rotate: 12, width: 80, delay: 2.1, duration: 12 },
+          { left: '85%', rotate: 20, width: 95, delay: 0.9, duration: 14 },
+        ].map((ray, i) => (
+          <motion.div
+            key={i}
+            className="absolute -top-24"
+            style={{
+              left: ray.left,
+              width: ray.width,
+              height: '150%',
+              background: 'linear-gradient(180deg, rgba(255,255,255,0.32) 0%, rgba(255,255,255,0.09) 45%, transparent 78%)',
+              transform: `rotate(${ray.rotate}deg)`,
+              transformOrigin: 'top center',
+              filter: 'blur(9px)',
+              mixBlendMode: 'screen',
+            }}
+            animate={{ opacity: [0.12, 0.32, 0.12] }}
+            transition={{ duration: ray.duration, repeat: Infinity, delay: ray.delay, ease: 'easeInOut' }}
+          />
+        ))}
+      </div>
+
       {/* Realistic animated wave layers */}
       <svg
         className="absolute bottom-0 w-full h-[75%]"
@@ -87,8 +146,14 @@ export default function WaveBackground() {
       
       {/* Enhanced foam particles - more white, realistic */}
       {[...Array(60)].map((_, i) => {
-        const yPosition = 45 + Math.random() * 30;
-        const size = Math.random() > 0.6 ? 3 : Math.random() > 0.3 ? 2 : 1;
+        const r1 = seeded(i + 1);
+        const r2 = seeded(i + 101);
+        const r3 = seeded(i + 201);
+        const r4 = seeded(i + 301);
+        const r5 = seeded(i + 401);
+        const r6 = seeded(i + 501);
+        const yPosition = 45 + r1 * 30;
+        const size = r2 > 0.6 ? 3 : r2 > 0.3 ? 2 : 1;
         return (
           <motion.div
             key={i}
@@ -96,7 +161,7 @@ export default function WaveBackground() {
             style={{
               width: `${size}px`,
               height: `${size}px`,
-              left: `${Math.random() * 100}%`,
+              left: `${r3 * 100}%`,
               top: `${yPosition}%`,
               filter: 'blur(0.8px)',
             }}
@@ -104,40 +169,79 @@ export default function WaveBackground() {
               opacity: [0, 0.95, 0],
               scale: [0, 2.5, 0],
               y: [0, -40, -80],
-              x: [0, Math.random() * 30 - 15, Math.random() * 50 - 25],
+              x: [0, r4 * 30 - 15, r5 * 50 - 25],
             }}
             transition={{
-              duration: 5 + Math.random() * 4,
+              duration: 5 + r6 * 4,
               repeat: Infinity,
-              delay: Math.random() * 8,
+              delay: r1 * 8,
               ease: [0.4, 0, 0.2, 1]
             }}
           />
         );
       })}
-      
+
       {/* Bright shimmer effects on water surface */}
-      {[...Array(25)].map((_, i) => (
-        <motion.div
-          key={`shimmer-${i}`}
-          className="absolute w-12 h-px bg-white/40"
-          style={{
-            left: `${Math.random() * 100}%`,
-            top: `${40 + Math.random() * 30}%`,
-            filter: 'blur(1.5px)',
-          }}
-          animate={{
-            opacity: [0, 0.8, 0],
-            scaleX: [0, 1.5, 0],
-          }}
-          transition={{
-            duration: 2 + Math.random() * 2,
-            repeat: Infinity,
-            delay: Math.random() * 5,
-            ease: "easeInOut"
-          }}
-        />
-      ))}
+      {[...Array(25)].map((_, i) => {
+        const r1 = seeded(i + 601);
+        const r2 = seeded(i + 701);
+        const r3 = seeded(i + 801);
+        const r4 = seeded(i + 901);
+        return (
+          <motion.div
+            key={`shimmer-${i}`}
+            className="absolute w-12 h-px bg-white/40"
+            style={{
+              left: `${r1 * 100}%`,
+              top: `${40 + r2 * 30}%`,
+              filter: 'blur(1.5px)',
+            }}
+            animate={{
+              opacity: [0, 0.8, 0],
+              scaleX: [0, 1.5, 0],
+            }}
+            transition={{
+              duration: 2 + r3 * 2,
+              repeat: Infinity,
+              delay: r4 * 5,
+              ease: "easeInOut"
+            }}
+          />
+        );
+      })}
+
+      {/* Sea life drifting through the water and along the sand */}
+      <SeaCreatures />
+
+      {/* Social-good pills, drifting gently in the lower water like buoys */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none hidden md:block">
+        {socialGoodBadges.map((badge, i) => {
+          const Icon = badge.icon;
+          return (
+            <motion.div
+              key={badge.label}
+              className="absolute"
+              style={{ left: badge.left, top: badge.top }}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{
+                opacity: [0.45, 0.8, 0.45],
+                y: [0, -14, 0],
+              }}
+              transition={{
+                duration: badge.duration,
+                repeat: Infinity,
+                delay: i * 0.6,
+                ease: 'easeInOut',
+              }}
+            >
+              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-lg">
+                <Icon className="w-4 h-4 text-[#5EEAFF] flex-shrink-0" />
+                <span className="text-white/80 text-xs md:text-sm font-medium whitespace-nowrap">{badge.label}</span>
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
     </div>
   );
 }

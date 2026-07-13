@@ -18,9 +18,10 @@ export default function BubbleCursor() {
         id: now + i,
         x: e.clientX + (Math.random() - 0.5) * 40,
         y: e.clientY + (Math.random() - 0.5) * 40,
-        size: Math.random() * 16 + 8,
-        hue: 180 + Math.random() * 40, // Cyan to teal range
-        hasSparkle: Math.random() > 0.6,
+        size: Math.random() * 20 + 10,
+        hue: 175 + Math.random() * 65, // cyan through aqua-violet range
+        drift: (Math.random() - 0.5) * 50,
+        hasSparkle: Math.random() > 0.55,
       }));
 
       setBubbles(prev => [...prev.slice(-20), ...newBubbles]);
@@ -48,10 +49,10 @@ export default function BubbleCursor() {
               left: bubble.x,
               top: bubble.y,
             }}
-            initial={{ scale: 0, opacity: 0.9, y: 0 }}
-            animate={{ scale: 1, opacity: 0, y: -80 }}
+            initial={{ scale: 0, opacity: 0.95, y: 0, x: 0 }}
+            animate={{ scale: 1, opacity: 0, y: -90, x: bubble.drift }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 2, ease: "easeOut" }}
+            transition={{ duration: 2.1, ease: "easeOut" }}
           >
             {/* Main bubble */}
             <div
@@ -59,15 +60,16 @@ export default function BubbleCursor() {
               style={{
                 width: bubble.size,
                 height: bubble.size,
-                background: `radial-gradient(circle at 30% 30%, 
-                  rgba(255,255,255,0.9), 
-                  hsla(${bubble.hue}, 80%, 70%, 0.5) 40%,
-                  hsla(${bubble.hue}, 90%, 60%, 0.2) 70%,
+                background: `radial-gradient(circle at 30% 28%,
+                  rgba(255,255,255,0.95),
+                  hsla(${bubble.hue}, 90%, 72%, 0.65) 35%,
+                  hsla(${bubble.hue}, 95%, 58%, 0.35) 65%,
                   transparent)`,
+                border: `1px solid hsla(${bubble.hue}, 100%, 85%, 0.5)`,
                 boxShadow: `
-                  inset 0 0 ${bubble.size/3}px rgba(255,255,255,0.5),
-                  0 0 ${bubble.size/2}px hsla(${bubble.hue}, 80%, 70%, 0.4),
-                  0 0 ${bubble.size}px hsla(${bubble.hue}, 70%, 60%, 0.2)
+                  inset 0 0 ${bubble.size / 2.5}px rgba(255,255,255,0.6),
+                  0 0 ${bubble.size * 0.7}px hsla(${bubble.hue}, 90%, 70%, 0.55),
+                  0 0 ${bubble.size * 1.6}px hsla(${bubble.hue}, 85%, 60%, 0.3)
                 `,
               }}
             />

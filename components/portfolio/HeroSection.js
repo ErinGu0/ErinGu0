@@ -1,28 +1,35 @@
 import React from 'react';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
 import WaveBackground from './WaveBackground';
 import OrbitingSkills from './OrbitingSkills';
 
-export default function HeroSection() {
-  const { scrollY } = useScroll();
-  
-  // Calculate when wave reaches each element to dissolve it
-  // Wave starts at top and moves down, so elements dissolve as wave passes
-  const windowHeight = typeof window !== 'undefined' ? window.innerHeight : 800;
-  
-  // Elements dissolve progressively as wave moves down
-  const subtitleOpacity = useTransform(scrollY, [0, windowHeight * 0.15], [1, 0]);
-  const nameOpacity = useTransform(scrollY, [windowHeight * 0.1, windowHeight * 0.25], [1, 0]);
-  const descOpacity = useTransform(scrollY, [windowHeight * 0.2, windowHeight * 0.35], [1, 0]);
-  const buttonsOpacity = useTransform(scrollY, [windowHeight * 0.25, windowHeight * 0.4], [1, 0]);
-  const skillsOpacity = useTransform(scrollY, [windowHeight * 0.3, windowHeight * 0.5], [1, 0]);
-  const scrollIndicatorOpacity = useTransform(scrollY, [windowHeight * 0.35, windowHeight * 0.5], [1, 0]);
+// Maps overall wave progress to a per-element dissolve state: elements
+// nearest the top of the hero get washed away first, matching the water
+// line rising from the top of the screen.
+function washState(progress, start, end) {
+  const t = Math.max(0, Math.min(1, (progress - start) / (end - start)));
+  const eased = t * t * (3 - 2 * t); // smoothstep, avoids a linear/mechanical feel
+  return {
+    opacity: 1 - eased,
+    y: eased * 46,
+    x: Math.sin(progress * 10) * 5 * eased,
+    filter: `blur(${eased * 14}px)`,
+  };
+}
+
+export default function HeroSection({ wash = 0 }) {
+  const subtitle = washState(wash, 0, 0.16);
+  const name = washState(wash, 0.08, 0.3);
+  const desc = washState(wash, 0.2, 0.42);
+  const buttons = washState(wash, 0.3, 0.5);
+  const skills = washState(wash, 0.32, 0.56);
+  const scrollHint = washState(wash, 0, 0.08);
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       <WaveBackground />
-      
+
       <div className="relative z-10 max-w-6xl mx-auto px-6 py-20">
         <div className="flex flex-col lg:flex-row items-center justify-between gap-12">
           {/* Text content */}
@@ -30,17 +37,17 @@ export default function HeroSection() {
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              style={{ opacity: subtitleOpacity }}
+              style={subtitle}
               transition={{ duration: 0.6, delay: 0.4 }}
               className="text-[#88C5CC] text-sm md:text-base tracking-[0.3em] uppercase mb-4 font-light"
             >
               Computer Science & Neuroscience @ UWaterloo
             </motion.p>
-            
+
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              style={{ opacity: nameOpacity }}
+              style={name}
               transition={{ duration: 0.8, delay: 0.5 }}
               className="text-5xl md:text-7xl lg:text-8xl font-light text-white tracking-tight mb-6"
             >
@@ -49,24 +56,25 @@ export default function HeroSection() {
                 Guo
               </span>
             </motion.h1>
-            
+
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              style={{ opacity: descOpacity }}
+              style={desc}
               transition={{ duration: 0.6, delay: 0.7 }}
               className="text-white/70 text-lg md:text-xl max-w-lg mx-auto lg:mx-0 leading-relaxed"
             >
-              Creating transformative solutions at the intersection of 
-              <span className="text-[#5EEAFF] font-semibold"> healthcare technology</span>,
-              <span className="text-[#F5E6D3] font-medium"> cognitive science</span>, and
-              <span className="text-white font-medium"> artificial intelligence</span>.
+              Building
+              <span className="text-[#5EEAFF] font-semibold"> tech for social good</span>,
+              using technology to create tools for
+              <span className="text-[#F5E6D3] font-medium"> healthcare access</span> and
+              <span className="text-white font-medium"> community impact</span>.
             </motion.p>
-            
+
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              style={{ opacity: buttonsOpacity }}
+              style={buttons}
               transition={{ duration: 0.6, delay: 0.9 }}
               className="mt-8 flex flex-wrap gap-4 justify-center lg:justify-start"
             >
@@ -86,12 +94,12 @@ export default function HeroSection() {
               </button>
             </motion.div>
           </div>
-          
+
           {/* Orbiting skills */}
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            style={{ opacity: skillsOpacity }}
+            style={skills}
             transition={{ duration: 1, delay: 0.5 }}
             className="flex-shrink-0"
           >
@@ -99,12 +107,12 @@ export default function HeroSection() {
           </motion.div>
         </div>
       </div>
-      
+
       {/* Scroll indicator */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        style={{ opacity: scrollIndicatorOpacity }}
+        style={scrollHint}
         transition={{ delay: 1.5 }}
         className="absolute bottom-8 left-1/2 -translate-x-1/2"
       >
@@ -113,7 +121,7 @@ export default function HeroSection() {
           transition={{ duration: 2, repeat: Infinity }}
           className="flex flex-col items-center gap-2 text-white/40"
         >
-          <span className="text-xs tracking-widest">SCROLL</span>
+          <span className="text-xs tracking-widest">SCROLL TO DIVE IN</span>
           <ChevronDown className="w-5 h-5" />
         </motion.div>
       </motion.div>

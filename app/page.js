@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Github, Linkedin, Mail, Phone, GraduationCap, Users, Code, Wrench } from 'lucide-react';
 import Navigation from '../components/portfolio/Navigation';
 import HeroSection from '../components/portfolio/HeroSection';
@@ -10,38 +10,71 @@ import ProjectCard from '../components/portfolio/ProjectCard';
 import OceanSection from '../components/portfolio/OceanSection';
 import BubbleCursor from '../components/portfolio/BubbleCursor';
 import WaveTransitionOverlay from '../components/portfolio/WaveTransitionOverlay';
-import EducationSection from '../components/portfolio/EducationSection';
 import AwardsWave from '../components/portfolio/AwardsWave';
 
 const experiences = [
   {
-    title: 'Software Engineer',
-    company: 'Biomechatronics Design Team',
-    period: 'Sept 2025 – Present',
-    location: 'University of Waterloo',
+    title: 'AI Automation Developer',
+    company: 'Bulk Barn Foods Limited',
+    period: 'May 2026 – Present',
+    location: 'Aurora, ON',
     highlights: [
-      'Collaborated to engineer reusable EMG electrode systems that reliably capture and process muscle-activation signals, integrating machine-learning pipelines to support real-time assistive-movement control',
-      'Developed Arduino C++ signal-processing algorithms and Python automation pipelines that cleared and processed 1GB+ of electromyography data, improving data quality and reducing manual intervention',
-      'Integrated and debugged real-time sensor systems alongside hardware engineers, capturing 100+ muscle-activity signals across 20 users while resolving noise, latency, and stability issues',
-      'Conducted iterative testing with clinical advisors and patients to validate system reliability and usability, achieving a 90% successful signal-capture rate'
+      'Developed an agentic AI helpdesk assistant in Microsoft Copilot Studio that classifies, triages, and drafts responses to inbound IT support emails across 250+ retail store locations, automating 60% of routine ticket workflows',
+      'Engineered intent-classification topics with knowledge-grounded answers over internal IT documentation, integrating Outlook and Power Automate to auto-route 150+ emails/week and cut first-response time by 40%',
+      'Designed escalation guardrails handing off low-confidence cases to analysts with structured summaries, maintaining 92% routing accuracy in testing'
     ]
   },
   {
-    title: 'Founder & Developer',
-    company: 'TrulyHer',
-    link: 'https://github.com/ErinGu0/TrulyHer',
+    title: 'Founder',
+    company: 'Revierelle',
+    link: 'https://github.com/chloewychan/reverielle',
+    period: '2026 – Present',
+    location: 'Toronto, ON',
+    highlights: [
+      'Designed makeup tutorials for non-Eurocentric and nontraditional makeup forms, celebrating features beyond mainstream beauty standards and building user confidence in their own look',
+      'Founded an AI makeup-tutoring app, securing $1,000 in grant funding and growing to 50+ beta users; built the core agentic loop where Claude Vision analyzes face shape, eye geometry, and skin tone to generate personalized tutorials',
+      "Engineered real-time AR makeup try-on by mapping DeepAR render layers onto MediaPipe Face Mesh's 468 facial landmarks, on-device in a React Native/Expo app backed by Supabase (Postgres, Auth, Storage)",
+      'Architected an end-to-end makeup agent that autonomously plans, renders, and verifies complete looks: decomposes a target look into ordered application steps, streams matching AR overlays per step, and re-analyzes user photos mid-tutorial to adapt remaining steps, achieving 88% step-completion accuracy in testing'
+    ]
+  },
+  {
+    title: 'Developer',
+    company: 'Oakville & Milton Humane Society',
+    period: 'May 2026 – Present',
+    location: 'Oakville, ON',
+    highlights: [
+      'Developed a volunteer task-management web application in React and TypeScript, building interactive task views with a detailed TaskDetailsModal that streamlined shift coordination for 80+ volunteers',
+      'Implemented backend fixes and delete functionality for one-time and recurring tasks, reducing stale and duplicate task records by 35% and improving scheduling data integrity'
+    ]
+  },
+  {
+    title: 'Software Engineer',
+    company: 'Biomechatronics Design Team',
     period: 'Sept 2025 – Present',
     location: 'Waterloo, ON',
     highlights: [
-      'Architected AI-powered platform to flag and address imposter-syndrome patterns in women in tech, building an interactive dashboard to visualize emotional trends and identify stress triggers',
-      'Developed full-stack application using React, Node.js, and Tailwind CSS with Gemini 2.5 Flash API sentiment analysis for personalized affirmation generation',
-      'Deployed backend on AWS (Lambda, API Gateway, DynamoDB) to enable scalable data processing and secure user analytics',
-      'Validated platform performance and user needs through 200+ user tests and interviews, achieving 4.5/5 satisfaction and 20% improvement in mental-health indicators'
+      'Developed EMG electrode systems that capture muscle-activation signals for assistive-movement control in muscular dystrophy patients, achieving 90% successful signal-capture rate across 23 users using Arduino C++',
+      'Built signal-processing algorithms filtering noise from raw EMG voltage data, feeding cleaned signals into Python machine-learning models that achieved 18% improvement in gesture classification accuracy'
     ]
   }
 ];
 
 const projects = [
+  {
+    name: 'TrulyHer',
+    github: 'https://github.com/ErinGu0/TrulyHer',
+    image: '/trulyher-preview.jpg',
+    tech: ['React', 'Node.js', 'Tailwind CSS', 'AWS Lambda', 'API Gateway', 'DynamoDB', 'Gemini 2.5 Flash API'],
+    highlights: [
+      'Architected an AI-powered platform that identifies impostor-syndrome stress triggers for 220+ women in tech, achieving a 97% satisfaction rate through personalized AI-driven recommendations and analysis',
+      'Created a responsive analytics dashboard displaying emotional-trend insights across user journals, driving a 19% improvement on the CIPS scale, backed by sub-2-second serverless AWS response times'
+    ],
+    stats: [
+      { value: '220+', label: 'Women Supported' },
+      { value: '97%', label: 'Satisfaction Rate' },
+      { value: '19%', label: 'CIPS Improvement' }
+    ]
+  },
   {
     name: 'StoryBridge',
     github: 'https://github.com/ErinGu0/StoryBridge',
@@ -88,6 +121,26 @@ const projects = [
   }
 ];
 
+// Staggered, blurred rise-in used to make the Experience section feel like
+// it's condensing out of the water once the wave overlay clears, rather
+// than simply popping into view. This is only used for the section that
+// sits directly under the hero (the first thing the wave reveals) - every
+// section further down the page uses ordinary scroll-triggered whileInView
+// instead, since those are naturally out of view until the user scrolls.
+const revealContainer = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.1, delayChildren: 0.05 } }
+};
+const revealItem = {
+  hidden: { opacity: 0, y: 28, filter: 'blur(14px)' },
+  visible: {
+    opacity: 1,
+    y: 0,
+    filter: 'blur(0px)',
+    transition: { duration: 0.65, ease: [0.16, 1, 0.3, 1] }
+  }
+};
+
 function EducationSectionContent() {
   const leadership = [
     { role: 'PR Officer', org: 'Women in Mathematics', desc: 'Leading outreach initiatives to empower women in STEM fields' },
@@ -97,17 +150,30 @@ function EducationSectionContent() {
     { role: 'Co-Founder', org: 'Hope for Hearing - Waterloo', desc: 'Fundraising for cochlear implant access and hearing research' },
     { role: '120+ Hours Volunteer', org: 'Alzheimer Society - Circle of Music', desc: 'Supporting individuals with dementia through music therapy sessions' }
   ];
-  const languages = ['Python', 'Java', 'JavaScript', 'C++', 'HTML', 'CSS', 'SQL', 'TypeScript', 'Ruby'];
-  const frameworks = ['React', 'Node.js', 'Firebase', 'Arduino', 'AWS', 'Tailwind CSS', 'Gemini API', 'ChatGPT API', 'PostgreSQL', 'Powershell', 'Linux', 'Windows'];
+  const languages = ['Python', 'JavaScript', 'TypeScript', 'Java', 'C++', 'C', 'HTML', 'CSS'];
+  const frameworks = ['React', 'React Native', 'Node.js', 'Expo', 'Tailwind CSS', 'LangChain', 'PostgreSQL', 'Supabase', 'Firebase', 'AWS', 'Microsoft Copilot Studio', 'Claude API', 'Gemini API', 'OpenAI API', 'Powershell', 'Linux', 'Windows'];
+
+  const fadeUp = (delay) => ({
+    initial: { opacity: 0, y: 28, filter: 'blur(14px)' },
+    whileInView: { opacity: 1, y: 0, filter: 'blur(0px)' },
+    viewport: { once: true, margin: '-100px' },
+    transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1], delay }
+  });
 
   return (
     <div className="max-w-6xl mx-auto px-6">
-      <div className="text-center mb-16">
-        <h2 className="text-4xl md:text-5xl font-light text-white mb-4">Education & Recognition</h2>
-        <div className="w-32 h-1 bg-gradient-to-r from-transparent via-[#5EEAFF] to-transparent mx-auto" />
-      </div>
-      
-      <div className="mb-12">
+      <motion.div {...fadeUp(0)} className="text-center mb-16">
+        <h2 className="text-4xl md:text-5xl font-light text-white mb-4">Education & Qualifications</h2>
+        <motion.div
+          className="w-32 h-1 bg-gradient-to-r from-transparent via-[#5EEAFF] to-transparent mx-auto"
+          initial={{ scaleX: 0, opacity: 0 }}
+          whileInView={{ scaleX: 1, opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
+        />
+      </motion.div>
+
+      <motion.div {...fadeUp(0.05)} className="mb-12">
         <div className="bg-gradient-to-br from-white/12 to-white/5 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-xl max-w-2xl mx-auto">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-4 rounded-2xl bg-gradient-to-br from-[#5EEAFF]/30 to-[#5EEAFF]/10 border border-[#5EEAFF]/30">
@@ -117,22 +183,22 @@ function EducationSectionContent() {
           </div>
           <div>
             <h4 className="text-xl text-white font-semibold">University of Waterloo</h4>
-            <p className="text-[#5EEAFF] font-medium mt-1">Bachelor of Mathematics, Major in Computer Science</p>
-            <p className="text-white/70 text-sm mt-2">Minor in Cognitive Science</p>
+            <p className="text-[#5EEAFF] font-medium mt-1">Bachelor of Computer Science, Minor in Cognitive Science</p>
+            <p className="text-white/70 text-sm mt-2">GPA: 3.86/4.0</p>
             <div className="flex items-center gap-4 mt-2">
-              <p className="text-white/50 text-sm">Expected May 2030</p>
               <p className="text-white/50 text-sm">Waterloo, ON</p>
+              <p className="text-white/50 text-sm">e46guo@uwaterloo.ca</p>
             </div>
           </div>
         </div>
-      </div>
-      
-      <div className="mb-12">
+      </motion.div>
+
+      <motion.div {...fadeUp(0.1)} className="mb-12">
         <h3 className="text-2xl font-semibold text-white text-center mb-8">Awards & Recognition</h3>
         <AwardsWave />
-      </div>
-      
-      <div className="grid md:grid-cols-2 gap-8 mb-12">
+      </motion.div>
+
+      <motion.div {...fadeUp(0.15)} className="grid md:grid-cols-2 gap-8 mb-12">
         <div className="bg-gradient-to-br from-white/12 to-white/5 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-xl">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-4 rounded-2xl bg-gradient-to-br from-[#5EEAFF]/30 to-[#5EEAFF]/10 border border-[#5EEAFF]/30">
@@ -148,7 +214,7 @@ function EducationSectionContent() {
             ))}
           </div>
         </div>
-        
+
         <div className="bg-gradient-to-br from-white/12 to-white/5 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-xl">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-4 rounded-2xl bg-gradient-to-br from-[#F5E6D3]/30 to-[#F5E6D3]/10 border border-[#F5E6D3]/30">
@@ -164,9 +230,9 @@ function EducationSectionContent() {
             ))}
           </div>
         </div>
-      </div>
-      
-      <div className="bg-gradient-to-br from-white/12 to-white/5 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-xl">
+      </motion.div>
+
+      <motion.div {...fadeUp(0.2)} className="bg-gradient-to-br from-white/12 to-white/5 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-xl">
         <div className="flex items-center gap-3 mb-8">
           <div className="p-4 rounded-2xl bg-gradient-to-br from-[#5EEAFF]/30 to-[#5EEAFF]/10 border border-[#5EEAFF]/30">
             <Users className="w-7 h-7 text-[#5EEAFF]" />
@@ -182,77 +248,193 @@ function EducationSectionContent() {
             </div>
           ))}
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
 
 export default function Home() {
+  // waveProgress is the *smoothed, displayed* value (0 -> 1). targetRef is
+  // where the wheel wants it to be; a rAF loop eases waveProgress toward it
+  // every frame so the wave rises/recedes fluidly instead of snapping
+  // directly to each wheel tick.
   const [waveProgress, setWaveProgress] = useState(0);
-  const [scrollUnlocked, setScrollUnlocked] = useState(false);
+  const [introActive, setIntroActive] = useState(true);
+  // scrollLocked stays true slightly longer than introActive: once the wave
+  // finishes, we keep swallowing scroll input for a beat so the newly
+  // revealed Experience section doesn't get scrolled straight past by
+  // leftover wheel/trackpad momentum from finishing the gesture.
+  const [scrollLocked, setScrollLocked] = useState(true);
+  const [contentRevealed, setContentRevealed] = useState(false);
+  const targetRef = useRef(0);
+  const rafRef = useRef(null);
+  const settleTimerRef = useRef(null);
+  const lastWheelAtRef = useRef(0);
+  const unlockCheckRef = useRef(null);
+  // Read via a ref inside the wheel handler instead of putting introActive
+  // in the effect's dependency array. Re-running the effect on every
+  // introActive change would tear down and re-add the wheel listener right
+  // at the wave-to-reveal handoff - that churn opened a brief window where
+  // Chromium's compositor-thread fast-scroll path could slip a real scroll
+  // through before the main-thread handler was reattached, letting the
+  // page jump past the newly-revealed section despite preventDefault().
+  const introActiveRef = useRef(true);
+  useEffect(() => {
+    introActiveRef.current = introActive;
+  }, [introActive]);
 
   useEffect(() => {
+    if (!scrollLocked) return undefined;
+
     const handleWheel = (e) => {
-      scrollUnlocked || e.preventDefault();
-      
-      scrollUnlocked || setWaveProgress(prev => {
-        const delta = e.deltaY * 0.001;
-        const newProgress = Math.max(0, Math.min(1, prev + delta));
-        newProgress >= 0.95 && setTimeout(() => setScrollUnlocked(true), 300);
-        return newProgress;
-      });
+      e.preventDefault();
+      lastWheelAtRef.current = performance.now();
+      if (!introActiveRef.current) return; // post-wave settle window: swallow input only
+
+      // Firefox reports deltaY in "lines" (small integers like 1-3) while
+      // Chrome/Edge report pixels (~100 per notch) - without normalizing,
+      // the wave barely moves per scroll in Firefox, which feels broken.
+      const pixelDelta = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+      const delta = Math.max(-100, Math.min(100, pixelDelta)) * 0.0014;
+      targetRef.current = Math.max(0, Math.min(1, targetRef.current + delta));
     };
 
+    document.body.style.overflow = 'hidden';
     window.addEventListener('wheel', handleWheel, { passive: false });
-    return () => window.removeEventListener('wheel', handleWheel);
-  }, [scrollUnlocked]);
 
-  const heroOpacity = 1 - (waveProgress * 2);
-  const waveComplete = waveProgress >= 0.8;
+    // Damped-spring integrator (frame-rate independent via dt) instead of a
+    // flat per-frame lerp: gives the water actual inertia - it eases into
+    // motion and settles without a hard per-frame ratio, which reads as
+    // noticeably smoother/more fluid than a fixed-percentage chase.
+    let velocity = 0;
+    let lastTime = null;
+    const stiffness = 100;
+    const damping = 20; // critically damped for stiffness=100, mass=1 - settles without overshoot/bounce
 
-  return scrollUnlocked ? (
-    <div className="min-h-screen bg-[#052D38]">
+    const tick = (now) => {
+      if (lastTime === null) lastTime = now;
+      const dt = Math.min((now - lastTime) / 1000, 0.05);
+      lastTime = now;
+
+      setWaveProgress((prev) => {
+        const displacement = targetRef.current - prev;
+        const acceleration = displacement * stiffness - velocity * damping;
+        velocity += acceleration * dt;
+        let next = prev + velocity * dt;
+        if (Math.abs(targetRef.current - next) < 0.0006 && Math.abs(velocity) < 0.001) {
+          next = targetRef.current;
+          velocity = 0;
+        }
+        return next;
+      });
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      window.removeEventListener('wheel', handleWheel);
+      cancelAnimationFrame(rafRef.current);
+    };
+  }, [scrollLocked]);
+
+  // Once the water has fully crested and settled, start dissolving the
+  // intro overlay.
+  useEffect(() => {
+    if (!introActive) return undefined;
+
+    if (waveProgress >= 0.995 && targetRef.current >= 1) {
+      if (!settleTimerRef.current) {
+        settleTimerRef.current = setTimeout(() => setIntroActive(false), 300);
+      }
+    } else if (settleTimerRef.current) {
+      clearTimeout(settleTimerRef.current);
+      settleTimerRef.current = null;
+    }
+
+    return () => {
+      if (settleTimerRef.current) {
+        clearTimeout(settleTimerRef.current);
+        settleTimerRef.current = null;
+      }
+    };
+  }, [waveProgress, introActive]);
+
+  // After the overlay starts dissolving: reveal the Experience section
+  // almost immediately, but keep the scroll lock engaged until wheel input
+  // actually goes quiet (rather than releasing on a fixed clock). A real
+  // scroll gesture - or trackpad momentum - can keep generating wheel
+  // events for well over a second after the wave completes; releasing on a
+  // fixed timer regardless of that meant leftover momentum could carry the
+  // page straight past the section that just finished revealing. A hard
+  // cap still guarantees it never feels stuck.
+  useEffect(() => {
+    if (introActive) return undefined;
+
+    const introEndedAt = performance.now();
+    lastWheelAtRef.current = introEndedAt;
+    const revealTimer = setTimeout(() => setContentRevealed(true), 100);
+
+    const MIN_DWELL = 500;
+    const QUIET_GAP = 350;
+    const MAX_WAIT = 2500;
+
+    const checkUnlock = () => {
+      const now = performance.now();
+      const sinceIntroEnded = now - introEndedAt;
+      const sinceLastWheel = now - lastWheelAtRef.current;
+      if (sinceIntroEnded >= MIN_DWELL && (sinceLastWheel >= QUIET_GAP || sinceIntroEnded >= MAX_WAIT)) {
+        document.body.style.overflow = '';
+        setScrollLocked(false);
+      } else {
+        unlockCheckRef.current = setTimeout(checkUnlock, 100);
+      }
+    };
+    unlockCheckRef.current = setTimeout(checkUnlock, MIN_DWELL);
+
+    return () => {
+      clearTimeout(revealTimer);
+      clearTimeout(unlockCheckRef.current);
+    };
+  }, [introActive]);
+
+  return (
+    <div className="min-h-screen bg-[#0D6B82]">
       <BubbleCursor />
       <Navigation />
-      
-      <section id="about" className="pt-24 pb-32 bg-gradient-to-b from-[#0A5A6E] via-[#0D6B82] to-[#0A5A6E]">
-        <EducationSectionContent />
-      </section>
-      
-      <OceanSection id="experience" className="py-32 bg-gradient-to-b from-[#0A5A6E] via-[#084858] to-[#063845]">
-        <div className="max-w-4xl mx-auto px-6 relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-            className="text-center mb-16"
-          >
+
+      <section id="experience" className="pt-24 pb-32 bg-gradient-to-b from-[#0D6B82] via-[#0A5A6E] to-[#084858]">
+        <motion.div
+          className="max-w-4xl mx-auto px-6 relative z-10"
+          variants={revealContainer}
+          initial="hidden"
+          animate={contentRevealed ? 'visible' : 'hidden'}
+        >
+          <motion.div variants={revealItem} className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-light text-white mb-4">Experience & Research</h2>
-            <div className="w-32 h-1 bg-gradient-to-r from-transparent via-[#5EEAFF] to-transparent mx-auto" />
+            <motion.div
+          className="w-32 h-1 bg-gradient-to-r from-transparent via-[#5EEAFF] to-transparent mx-auto"
+          initial={{ scaleX: 0, opacity: 0 }}
+          whileInView={{ scaleX: 1, opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
+        />
           </motion.div>
-          
+
           <div className="relative">
             <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-[#5EEAFF] via-[#5EEAFF]/50 to-transparent hidden md:block rounded-full" />
-            
+
             <div className="space-y-8 md:pl-12">
               {experiences.map((exp, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, delay: i * 0.1 }}
-                >
+                <motion.div key={i} variants={revealItem}>
                   <ExperienceCard experience={exp} index={i} />
                 </motion.div>
               ))}
             </div>
           </div>
-        </div>
-      </OceanSection>
-      
-      <OceanSection id="projects" className="py-32 bg-gradient-to-b from-[#063845] via-[#052D38] to-[#0A5A6E]">
+        </motion.div>
+      </section>
+
+      <OceanSection id="projects" className="py-32 bg-gradient-to-b from-[#084858] via-[#063845] to-[#052D38]">
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -262,9 +444,15 @@ export default function Home() {
             className="text-center mb-16"
           >
             <h2 className="text-4xl md:text-5xl font-light text-white mb-4">Featured Projects</h2>
-            <div className="w-32 h-1 bg-gradient-to-r from-transparent via-[#5EEAFF] to-transparent mx-auto" />
+            <motion.div
+          className="w-32 h-1 bg-gradient-to-r from-transparent via-[#5EEAFF] to-transparent mx-auto"
+          initial={{ scaleX: 0, opacity: 0 }}
+          whileInView={{ scaleX: 1, opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
+        />
           </motion.div>
-          
+
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {projects.map((project, i) => (
               <motion.div
@@ -280,8 +468,12 @@ export default function Home() {
           </div>
         </div>
       </OceanSection>
-      
-      <OceanSection id="contact" className="py-32 bg-gradient-to-b from-[#0A5A6E] to-[#0D7A94]">
+
+      <OceanSection id="about" className="py-32 bg-gradient-to-b from-[#052D38] via-[#042530] to-[#031F29]">
+        <EducationSectionContent />
+      </OceanSection>
+
+      <OceanSection id="contact" className="py-32 bg-gradient-to-b from-[#031F29] via-[#021820] to-[#01141A]">
         <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -290,13 +482,19 @@ export default function Home() {
             transition={{ duration: 0.8 }}
           >
             <h2 className="text-4xl md:text-5xl font-light text-white mb-4">Let's Connect</h2>
-            <div className="w-32 h-1 bg-gradient-to-r from-transparent via-[#5EEAFF] to-transparent mx-auto mb-8" />
-            
+            <motion.div
+              className="w-32 h-1 bg-gradient-to-r from-transparent via-[#5EEAFF] to-transparent mx-auto mb-8"
+              initial={{ scaleX: 0, opacity: 0 }}
+              whileInView={{ scaleX: 1, opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
+            />
+
             <p className="text-white/70 text-lg mb-12 max-w-2xl mx-auto leading-relaxed">
-              I'm passionate about leveraging technology to create meaningful impact in healthcare, education, and beyond. 
+              I'm passionate about leveraging technology to create meaningful impact in healthcare, education, and beyond.
               Let's collaborate on something extraordinary.
             </p>
-            
+
             <div className="flex flex-wrap justify-center gap-6 mb-12">
               <a
                 href="mailto:guoe215@gmail.com"
@@ -305,7 +503,7 @@ export default function Home() {
                 <Mail className="w-6 h-6 text-[#5EEAFF]" />
                 <span className="text-white font-medium">guoe215@gmail.com</span>
               </a>
-              
+
               <a
                 href="tel:226-988-5819"
                 className="flex items-center gap-3 px-8 py-5 bg-gradient-to-br from-white/12 to-white/5 backdrop-blur-xl border border-white/20 rounded-2xl hover:border-[#5EEAFF]/50 transition-colors duration-300 shadow-xl group"
@@ -314,7 +512,7 @@ export default function Home() {
                 <span className="text-white font-medium">226-988-5819</span>
               </a>
             </div>
-            
+
             <div className="flex justify-center gap-6">
               <a
                 href="https://github.com/ErinGu0"
@@ -336,30 +534,33 @@ export default function Home() {
           </motion.div>
         </div>
       </OceanSection>
-      
-      <footer className="py-8 border-t border-white/10 bg-[#0D7A94]/50 backdrop-blur-sm">
+
+      <footer className="py-8 border-t border-white/10 bg-[#01141A] backdrop-blur-sm">
         <div className="max-w-6xl mx-auto px-6 text-center">
           <p className="text-white/40 text-sm">
             © 2025 Erin Guo. Crafted with passion for meaningful technology.
           </p>
         </div>
       </footer>
-    </div>
-  ) : (
-    <div className="min-h-screen bg-[#052D38] overflow-hidden">
-      <BubbleCursor />
-      <Navigation />
-      
-      <div 
-        className="fixed inset-0 z-10"
-        style={{ opacity: Math.max(0, heroOpacity) }}
-      >
-        <HeroSection />
-      </div>
-      
-      <WaveTransitionOverlay waveProgress={waveProgress} />
-      
-      <EducationSection isVisible={waveComplete} waveProgress={waveProgress} />
+
+      {/* Intro wave sequence: sits on top of the real page and dissolves
+          away once the water fully crests, revealing the page beneath it
+          (which has already begun its own wave-in reveal) rather than
+          swapping to a separate duplicate view. */}
+      <AnimatePresence>
+        {introActive && (
+          <motion.div
+            className="fixed inset-0 z-40"
+            exit={{ opacity: 0, filter: 'blur(24px)' }}
+            transition={{ duration: 0.7, ease: [0.6, 0.05, 0.15, 1] }}
+          >
+            <div className="fixed inset-0 z-10">
+              <HeroSection wash={waveProgress} />
+            </div>
+            <WaveTransitionOverlay progress={waveProgress} complete={waveProgress >= 0.995} />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Github, Linkedin, Mail } from 'lucide-react';
 
-const navItems = ['About', 'Experience', 'Projects', 'Contact'];
+const navItems = ['Experience', 'Projects', 'About', 'Contact'];
 
 export default function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false);

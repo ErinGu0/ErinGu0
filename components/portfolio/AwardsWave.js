@@ -20,8 +20,8 @@ export default function AwardsWave() {
             key={i}
             className="absolute"
             style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
+              left: `${(i * 47) % 100}%`,
+              top: `${(i * 31) % 100}%`,
             }}
             animate={{
               opacity: [0, 1, 0],

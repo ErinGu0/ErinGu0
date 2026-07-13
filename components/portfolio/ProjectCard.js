@@ -4,7 +4,7 @@ import { Github } from 'lucide-react';
 export default function ProjectCard({ project }) {
   return (
     <div className="group relative h-full">
-      <div className="relative bg-gradient-to-br from-white/8 to-white/3 backdrop-blur-xl border border-white/20 rounded-3xl p-6 md:p-8 hover:border-[#88C5CC]/40 transition-colors duration-300 shadow-xl h-full flex flex-col">
+      <div className="relative bg-gradient-to-br from-white/8 to-white/3 backdrop-blur-xl border border-white/20 rounded-3xl p-6 md:p-8 hover:border-[#88C5CC]/40 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-[#5EEAFF]/10 shadow-xl h-full flex flex-col">
         {project.image && (
           <div className="mb-6 rounded-2xl overflow-hidden border border-white/10 bg-white/5 flex items-center justify-center h-56">
             <img 
