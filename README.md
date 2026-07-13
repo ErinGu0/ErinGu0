@@ -1,44 +1,30 @@
-<<<<<<< HEAD
-# Erin Guo Portfolio
+## 🌊 Welcome to Erin Guo’s Website
 
-A modern, interactive portfolio website built with Next.js, React, and Framer Motion. Features ocean-themed animations, smooth transitions, and a unique scroll-based navigation experience.
+This is my personal portfolio website – welcome! https://erin-gu0.vercel.app/
+
+It showcases my projects, skills, and personality through an ocean-inspired, interactive experience built with a modern web tech stack. 
+
+## ✨ Overview
+
+A modern, interactive portfolio website built with Next.js, React, and Framer Motion. 
+It features ocean-themed animations, smooth transitions, and a unique scroll-based navigation experience. 
 
 ## 🚀 Features
 
-- **Interactive Wave Transitions** - Scroll-controlled wave animations
-- **Animated Ocean Background** - Realistic water effects with multiple layers
-- **Bubble Cursor** - Custom cursor with trailing bubble effects
-- **Orbiting Skills Display** - Animated floating skill tags
-- **Responsive Design** - Fully responsive across all devices
-- **Smooth Animations** - Powered by Framer Motion
-- **Modern UI Components** - Built with Shadcn/ui
+- Interactive wave transitions controlled by scroll for a dynamic browsing experience.  
+- Animated ocean background with layered water effects for depth and movement. 
+- Bubble cursor that follows the user with trailing bubble effects. 
+- Orbiting skills display with floating, animated skill tags. 
+- Responsive design that works seamlessly across desktop, tablet, and mobile.  
+- Smooth page and component animations powered by Framer Motion. 
+- Modern UI components built with Shadcn/ui for a clean, accessible interface.
 
 ## 🛠️ Tech Stack
 
-- **Framework:** Next.js 14
-- **Styling:** Tailwind CSS
-- **Animations:** Framer Motion
-- **UI Components:** Shadcn/ui
-- **Icons:** Lucide React
-- **Charts:** Recharts
-- **Form Handling:** React Hook Form
-
-## 📁 Project Structure
-=======
-## Hi there 👋
-
-<!--
-**ErinGu0/ErinGu0** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
-
-Here are some ideas to get you started:
-
-- 🔭 I’m currently working on ...
-- 🌱 I’m currently learning ...
-- 👯 I’m looking to collaborate on ...
-- 🤔 I’m looking for help with ...
-- 💬 Ask me about ...
-- 📫 How to reach me: ...
-- 😄 Pronouns: ...
-- ⚡ Fun fact: ...
--->
->>>>>>> 2b24832b8a6087816b28dfcabcdb22f042892fef
+- Framework: Next.js 14 with React and the App Router. 
+- Styling: Tailwind CSS for utility-first, responsive design. 
+- Animations: Framer Motion for page transitions and interactive motion effects. 
+- UI Components: Shadcn/ui for reusable, accessible components. 
+- Icons: Lucide React for consistent, modern iconography.   
+- Charts: Recharts for data visualization. 
+- Form Handling: React Hook Form for accessible forms and validation.
