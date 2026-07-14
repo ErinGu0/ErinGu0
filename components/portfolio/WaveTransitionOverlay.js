@@ -92,9 +92,14 @@ export default function WaveTransitionOverlay({ progress = 0, complete = false }
         transition={{
           // The incoming progress value is already spring-smoothed upstream
           // (in page.js), so this just needs to track it tightly rather than
-          // apply a second, slower layer of easing on top - a soft touch to
-          // round off per-frame steps, not an independent lag source.
-          height: { type: 'spring', stiffness: 260, damping: 30, mass: 0.35 },
+          // apply a second, slower layer of easing on top. The previous
+          // spring here (damping 30 against a critical value of ~19 for
+          // this stiffness/mass) was actually overdamped - it crept for the
+          // first few hundred ms before catching up, which is exactly what
+          // read as "stuck at the top while the background waves keep
+          // moving." A short linear tween just follows the already-eased
+          // value immediately instead of re-smoothing it.
+          height: { duration: 0.1, ease: 'linear' },
           x: { duration: 12, repeat: Infinity, ease: 'easeInOut' },
         }}
       >
