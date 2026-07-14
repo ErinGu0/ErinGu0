@@ -12,15 +12,6 @@ import BubbleCursor from '../components/portfolio/BubbleCursor';
 import WaveTransitionOverlay from '../components/portfolio/WaveTransitionOverlay';
 import AwardsWave from '../components/portfolio/AwardsWave';
 
-// Touch-only dive distance, in viewport heights - must match the height
-// set on .hero-dive-spacer in globals.css so the wave finishes exactly
-// where that spacer ends (the top of the Experience & Research section).
-const DIVE_VH_MULTIPLIER = 1.7;
-// How long to hold the pinned scroll position once the wave crests, before
-// releasing into Experience & Research - long enough to read as a
-// deliberate arrival, short enough not to feel stuck.
-const TOUCH_SETTLE_MS = 550;
-
 const experiences = [
   {
     title: 'AI Automation Developer',
@@ -293,31 +284,61 @@ export default function Home() {
   }, [introActive]);
 
   // Touch devices (phones/tablets) get a fundamentally different intro from
-  // desktop. The desktop version hijacks wheel events to manually drive a
-  // locked, gesture-stepped progress value - that's fine for a wheel, which
-  // fires discrete notches. Trying the same trick on touch (swipe deltas
-  // driving progress, preventDefault-ing scroll, a settle window meant for
-  // trackpad momentum) was the source of the glitchiness: a partial swipe
-  // left the wave frozen mid-crest, and every follow-up swipe got silently
-  // swallowed by logic that only makes sense for a wheel. Detected once on
-  // mount via matchMedia so SSR and first client render agree (no
-  // hydration mismatch).
-  const [isTouch, setIsTouch] = useState(false);
+  // desktop: the desktop version hijacks wheel events, which fire many
+  // discrete notches per gesture, so accumulating them into targetRef
+  // feels natural. A touch swipe only ever produces one gesture, so
+  // instead of tracking swipe distance or real scroll position (both
+  // tried before, both required multiple swipes and felt glitchy - a
+  // partial swipe froze the wave mid-crest, or a single swipe only
+  // physically covered part of the scroll distance needed), the very
+  // first meaningful touch movement now commits to the FULL dive:
+  // targetRef jumps straight to 1 and the spring below eases there on its
+  // own. Every touch event after that is just prevented (page stays
+  // locked, nothing else happens) until the animation finishes on its own
+  // and the lock releases - "one scroll down and it's done."
   useEffect(() => {
-    setIsTouch(window.matchMedia('(pointer: coarse)').matches);
-  }, []);
+    if (!scrollLocked) return undefined;
 
-  // Single spring integrator shared by both input methods, running for the
-  // whole intro lifecycle regardless of whether targetRef is being driven
-  // by wheel deltas or by scroll position. This is what makes the touch
-  // version feel like a "pretty wash" instead of snapping straight to raw
-  // scroll position: quick, jerky momentum-scroll events on a phone would
-  // otherwise yank waveProgress around every frame (the "too sensitive"
-  // feel); easing toward the target instead damps that into one smooth
-  // rise, same as the desktop wheel version.
-  useEffect(() => {
-    if (!introActive) return undefined;
+    const handleWheel = (e) => {
+      e.preventDefault();
+      lastWheelAtRef.current = performance.now();
+      if (!introActiveRef.current) return; // post-wave settle window: swallow input only
 
+      // Firefox reports deltaY in "lines" (small integers like 1-3) while
+      // Chrome/Edge report pixels (~100 per notch) - without normalizing,
+      // the wave barely moves per scroll in Firefox, which feels broken.
+      const pixelDelta = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+      const delta = Math.max(-100, Math.min(100, pixelDelta)) * 0.0014;
+      targetRef.current = Math.max(0, Math.min(1, targetRef.current + delta));
+    };
+
+    let touchStartY = null;
+    let touchCommitted = false;
+    const handleTouchStart = (e) => {
+      touchStartY = e.touches[0].clientY;
+    };
+    const handleTouchMove = (e) => {
+      e.preventDefault();
+      lastWheelAtRef.current = performance.now();
+      if (touchCommitted || !introActiveRef.current) return; // already committed, or in the post-wave settle window: swallow input only
+      const currentY = e.touches[0].clientY;
+      // Small threshold so an accidental tap-and-twitch doesn't trigger the
+      // whole dive, but any real, deliberate swipe (a few pixels) does.
+      if (touchStartY !== null && Math.abs(touchStartY - currentY) > 8) {
+        touchCommitted = true;
+        targetRef.current = 1;
+      }
+    };
+
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
+
+    // Damped-spring integrator (frame-rate independent via dt) instead of a
+    // flat per-frame lerp: gives the water actual inertia - it eases into
+    // motion and settles without a hard per-frame ratio, which reads as
+    // noticeably smoother/more fluid than a fixed-percentage chase.
     let velocity = 0;
     let lastTime = null;
     const stiffness = 100;
@@ -343,89 +364,21 @@ export default function Home() {
     };
     rafRef.current = requestAnimationFrame(tick);
 
-    return () => cancelAnimationFrame(rafRef.current);
-  }, [introActive]);
-
-  useEffect(() => {
-    if (isTouch) return undefined; // touch drives targetRef from scroll position below
-    if (!scrollLocked) return undefined;
-
-    const handleWheel = (e) => {
-      e.preventDefault();
-      lastWheelAtRef.current = performance.now();
-      if (!introActiveRef.current) return; // post-wave settle window: swallow input only
-
-      // Firefox reports deltaY in "lines" (small integers like 1-3) while
-      // Chrome/Edge report pixels (~100 per notch) - without normalizing,
-      // the wave barely moves per scroll in Firefox, which feels broken.
-      const pixelDelta = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
-      const delta = Math.max(-100, Math.min(100, pixelDelta)) * 0.0014;
-      targetRef.current = Math.max(0, Math.min(1, targetRef.current + delta));
-    };
-
-    document.body.style.overflow = 'hidden';
-    window.addEventListener('wheel', handleWheel, { passive: false });
-
-    return () => window.removeEventListener('wheel', handleWheel);
-  }, [scrollLocked, isTouch]);
-
-  // Touch: the page is scrollable from the first frame - no preventDefault,
-  // no gesture accumulation. targetRef just tracks how far the user has
-  // scrolled through a dedicated dive zone (see .hero-dive-spacer in
-  // globals.css, sized to DIVE_VH vh so the wash happens over a generous
-  // scroll distance instead of snapping within one quick swipe). Once
-  // they've scrolled all the way through it, the scroll position is pinned
-  // exactly at the Experience & Research boundary and briefly locked - a
-  // deliberate "surfacing" pause - before releasing into the page, rather
-  // than letting momentum carry straight past the section that just
-  // finished revealing.
-  const touchSettledRef = useRef(false);
-  const settleTimeoutRef = useRef(null);
-  useEffect(() => {
-    if (!isTouch) return undefined;
-    if (!introActive) return undefined;
-
-    document.body.style.overflow = '';
-    let ticking = false;
-    const diveDistance = () => window.innerHeight * DIVE_VH_MULTIPLIER;
-
-    const update = () => {
-      ticking = false;
-      if (touchSettledRef.current) return;
-
-      const progress = Math.max(0, Math.min(1, window.scrollY / diveDistance()));
-      targetRef.current = progress;
-
-      if (progress >= 0.995) {
-        touchSettledRef.current = true;
-        window.scrollTo({ top: diveDistance() });
-        document.body.style.overflow = 'hidden';
-        settleTimeoutRef.current = setTimeout(() => {
-          setIntroActive(false);
-          setContentRevealed(true);
-          document.body.style.overflow = '';
-        }, TOUCH_SETTLE_MS);
-      }
-    };
-    const handleScroll = () => {
-      if (ticking) return;
-      ticking = true;
-      requestAnimationFrame(update);
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    update();
     return () => {
-      window.removeEventListener('scroll', handleScroll);
-      clearTimeout(settleTimeoutRef.current);
+      window.removeEventListener('wheel', handleWheel);
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchmove', handleTouchMove);
+      cancelAnimationFrame(rafRef.current);
     };
-  }, [isTouch, introActive]);
+  }, [scrollLocked]);
 
   // Once the water has fully crested and settled, start dissolving the
-  // intro overlay. (Desktop/wheel only - touch dissolves immediately as
-  // part of its own scroll-driven effect above.)
+  // intro overlay. The page's real scroll position never moved during any
+  // of this (body stayed overflow:hidden the whole time), so the instant
+  // this unlocks, the Experience & Research section is sitting exactly at
+  // the top - it was always there at scrollY 0, just hidden behind this
+  // overlay.
   useEffect(() => {
-    if (isTouch) return undefined;
     if (!introActive) return undefined;
 
     if (waveProgress >= 0.995 && targetRef.current >= 1) {
@@ -443,19 +396,17 @@ export default function Home() {
         settleTimerRef.current = null;
       }
     };
-  }, [waveProgress, introActive, isTouch]);
+  }, [waveProgress, introActive]);
 
   // After the overlay starts dissolving: reveal the Experience section
-  // almost immediately, but keep the scroll lock engaged until wheel input
-  // actually goes quiet (rather than releasing on a fixed clock). A real
-  // scroll gesture - or trackpad momentum - can keep generating wheel
+  // almost immediately, but keep the scroll lock engaged until wheel/touch
+  // input actually goes quiet (rather than releasing on a fixed clock). A
+  // real scroll gesture - or trackpad/touch momentum - can keep generating
   // events for well over a second after the wave completes; releasing on a
   // fixed timer regardless of that meant leftover momentum could carry the
   // page straight past the section that just finished revealing. A hard
-  // cap still guarantees it never feels stuck. (Desktop/wheel only - touch
-  // was never locked, so there's nothing to unlock.)
+  // cap still guarantees it never feels stuck.
   useEffect(() => {
-    if (isTouch) return undefined;
     if (introActive) return undefined;
 
     const introEndedAt = performance.now();
@@ -483,7 +434,7 @@ export default function Home() {
       clearTimeout(revealTimer);
       clearTimeout(unlockCheckRef.current);
     };
-  }, [introActive, isTouch]);
+  }, [introActive]);
 
   // Nav links (and the hero's "Get in Touch") have to work even while the
   // intro wave still owns the viewport - especially on mobile, where the
@@ -510,12 +461,6 @@ export default function Home() {
     <div className="min-h-screen bg-[#0D6B82]">
       <BubbleCursor />
       <Navigation onNavigate={handleNavigate} />
-
-      {/* Touch-only spacer reserving scroll distance for the dive - see
-          DIVE_VH_MULTIPLIER above and .hero-dive-spacer in globals.css.
-          Zero height on desktop/wheel, where the intro is locked instead
-          of scrolled through. */}
-      <div aria-hidden="true" className="hero-dive-spacer" />
 
       <section id="experience" className="pt-24 pb-32 bg-gradient-to-b from-[#0D6B82] via-[#0A5A6E] to-[#084858]">
         <motion.div
