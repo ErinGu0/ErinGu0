@@ -333,6 +333,17 @@ export default function Home() {
     setWaveProgress(1);
     targetRef.current = 1;
     setIntroActive(false);
+    // The generic post-intro unlock timer below waits for wheel/touch input
+    // to "go quiet" - built for wheel/trackpad momentum, where more input
+    // can keep arriving well after the gesture that triggered completion.
+    // A touch dive has no such ambiguity: Framer's onAnimationComplete is a
+    // definitive, already-finished signal, and the user's finger touching
+    // the screen while it was playing would otherwise keep resetting that
+    // quiet-timer, silently stretching the gap before Experience & Research
+    // appears. Unlock immediately instead of routing through that wait.
+    unlockPageScroll();
+    setScrollLocked(false);
+    setTimeout(() => setContentRevealed(true), 100);
   };
 
   useEffect(() => {
@@ -450,6 +461,7 @@ export default function Home() {
   // cap still guarantees it never feels stuck.
   useEffect(() => {
     if (introActive) return undefined;
+    if (autoPlay) return undefined; // handleDiveComplete already unlocked immediately - no momentum to wait out
 
     const introEndedAt = performance.now();
     lastWheelAtRef.current = introEndedAt;
@@ -476,7 +488,7 @@ export default function Home() {
       clearTimeout(revealTimer);
       clearTimeout(unlockCheckRef.current);
     };
-  }, [introActive]);
+  }, [introActive, autoPlay]);
 
   // Nav links (and the hero's "Get in Touch") have to work even while the
   // intro wave still owns the viewport - especially on mobile, where the
