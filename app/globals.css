@@ -67,3 +67,17 @@
     -webkit-tap-highlight-color: transparent;
   }
 }
+
+/* Reserves scroll distance for the touch intro dive (see DIVE_VH_MULTIPLIER
+   in app/page.js, which must match the 170vh below) so the wave wash
+   happens gradually over a real scroll distance instead of snapping within
+   one quick swipe. Zero on non-touch devices, where the intro is locked
+   and driven by the wheel instead of scrolled through. */
+.hero-dive-spacer {
+  height: 0;
+}
+@media (pointer: coarse) {
+  .hero-dive-spacer {
+    height: 170vh;
+  }
+}
