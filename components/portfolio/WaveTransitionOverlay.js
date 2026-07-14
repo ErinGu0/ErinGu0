@@ -332,10 +332,9 @@ export default function WaveTransitionOverlay({ progress = 0, complete = false, 
         animate={{ scaleY: 1 }}
         // Same signature ease used for the site's other elegant reveals
         // (section underlines, card fades) - a long, gentle glide rather
-        // than a mechanical linear/cubic-out curve. 1.6s gives the crest
-        // and creatures time to actually read as "descending" instead of
-        // flashing past.
-        transition={{ duration: 1.6, ease: [0.16, 1, 0.3, 1] }}
+        // than a mechanical linear/cubic-out curve. 3s is the descent
+        // itself taking its time, not just what happens after it lands.
+        transition={{ duration: 3, ease: [0.16, 1, 0.3, 1] }}
         onAnimationComplete={() => {
           setSettled(true);
           if (onComplete) onComplete();
