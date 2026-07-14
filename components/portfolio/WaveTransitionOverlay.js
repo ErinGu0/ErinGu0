@@ -259,8 +259,11 @@ function WaveTransitionOverlayBody({ active, complete }) {
                 scale: [0.3, 1.4, 0.3],
               }}
               transition={{
-                duration: 1.4 + (i % 5) * 0.15,
-                delay: (i % 8) * 0.03,
+                // Trimmed from 1.4-2.0s: this plays after the dive already
+                // completes, so it shouldn't add a second long beat to the
+                // ending - just a quick sparkle, not another wait.
+                duration: 0.7 + (i % 5) * 0.08,
+                delay: (i % 8) * 0.02,
                 ease: 'easeOut',
               }}
             />
@@ -330,11 +333,11 @@ export default function WaveTransitionOverlay({ progress = 0, complete = false, 
         }}
         initial={{ scaleY: 0 }}
         animate={{ scaleY: 1 }}
-        // Same signature ease used for the site's other elegant reveals
-        // (section underlines, card fades) - a long, gentle glide rather
-        // than a mechanical linear/cubic-out curve. 3s is the descent
-        // itself taking its time, not just what happens after it lands.
-        transition={{ duration: 3, ease: [0.16, 1, 0.3, 1] }}
+        // Symmetric ease-in-out - eases into motion AND eases into landing,
+        // rather than the previous curve's fast start. Reads as gentler/
+        // more deliberate over the longer 4s duration instead of feeling
+        // front-loaded.
+        transition={{ duration: 4, ease: [0.45, 0, 0.25, 1] }}
         onAnimationComplete={() => {
           setSettled(true);
           if (onComplete) onComplete();

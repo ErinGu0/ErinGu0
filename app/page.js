@@ -666,7 +666,10 @@ export default function Home() {
           <motion.div
             className="fixed inset-0 z-40"
             exit={{ opacity: 0, filter: 'blur(24px)' }}
-            transition={{ duration: 0.7, ease: [0.6, 0.05, 0.15, 1] }}
+            // Shortened from 0.7s - once the dive/wave has already taken
+            // its time, the dissolve into the page itself should feel
+            // snappy, not add another long beat to the ending.
+            transition={{ duration: 0.4, ease: [0.6, 0.05, 0.15, 1] }}
           >
             <div className="fixed inset-0 z-10">
               <HeroSection wash={waveProgress} onNavigate={handleNavigate} autoPlay={autoPlay} />
