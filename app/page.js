@@ -12,6 +12,31 @@ import BubbleCursor from '../components/portfolio/BubbleCursor';
 import WaveTransitionOverlay from '../components/portfolio/WaveTransitionOverlay';
 import AwardsWave from '../components/portfolio/AwardsWave';
 
+// iOS Safari doesn't reliably honor `overflow: hidden` on the body - it
+// still lets touch-driven scrolling through in some cases (rubber-band
+// bounce, fast flicks), which was the cause of the real page silently
+// scrolling underneath the fake wave overlay: two independent motions
+// fighting for the same screen, which read as the wave stalling, jumping,
+// and a "second wave" rising from the bottom. `position: fixed` on the
+// body is the standard, actually-reliable way to lock scroll on iOS.
+function lockPageScroll() {
+  const scrollY = window.scrollY;
+  document.body.style.position = 'fixed';
+  document.body.style.top = `-${scrollY}px`;
+  document.body.style.left = '0';
+  document.body.style.right = '0';
+  document.body.style.width = '100%';
+}
+function unlockPageScroll() {
+  const scrollY = document.body.style.top;
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  document.body.style.width = '';
+  window.scrollTo(0, scrollY ? -parseInt(scrollY, 10) : 0);
+}
+
 const experiences = [
   {
     title: 'AI Automation Developer',
@@ -330,7 +355,7 @@ export default function Home() {
       }
     };
 
-    document.body.style.overflow = 'hidden';
+    lockPageScroll();
     window.addEventListener('wheel', handleWheel, { passive: false });
     window.addEventListener('touchstart', handleTouchStart, { passive: true });
     window.addEventListener('touchmove', handleTouchMove, { passive: false });
@@ -422,7 +447,7 @@ export default function Home() {
       const sinceIntroEnded = now - introEndedAt;
       const sinceLastWheel = now - lastWheelAtRef.current;
       if (sinceIntroEnded >= MIN_DWELL && (sinceLastWheel >= QUIET_GAP || sinceIntroEnded >= MAX_WAIT)) {
-        document.body.style.overflow = '';
+        unlockPageScroll();
         setScrollLocked(false);
       } else {
         unlockCheckRef.current = setTimeout(checkUnlock, 100);
@@ -449,7 +474,7 @@ export default function Home() {
       setIntroActive(false);
       setContentRevealed(true);
       setScrollLocked(false);
-      document.body.style.overflow = '';
+      unlockPageScroll();
     }
     setTimeout(() => {
       const element = document.getElementById(id);
