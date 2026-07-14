@@ -339,6 +339,12 @@ export default function Home() {
 
     let touchStartY = null;
     let touchCommitted = false;
+    // Wall-clock timestamp of commit, NOT a frame counter. See tick() below
+    // for why this matters: it's what makes completion immune to a stalled
+    // main thread instead of needing many frames to "catch up."
+    let touchCommittedAt = null;
+    const TOUCH_DIVE_MS = 750;
+
     const handleTouchStart = (e) => {
       touchStartY = e.touches[0].clientY;
     };
@@ -351,7 +357,8 @@ export default function Home() {
       // whole dive, but any real, deliberate swipe (a few pixels) does.
       if (touchStartY !== null && Math.abs(touchStartY - currentY) > 8) {
         touchCommitted = true;
-        targetRef.current = 1;
+        touchCommittedAt = performance.now();
+        targetRef.current = 1; // read by the settle-completion check below
       }
     };
 
@@ -371,20 +378,40 @@ export default function Home() {
 
     const tick = (now) => {
       if (lastTime === null) lastTime = now;
-      const dt = Math.min((now - lastTime) / 1000, 0.05);
       lastTime = now;
 
-      setWaveProgress((prev) => {
-        const displacement = targetRef.current - prev;
-        const acceleration = displacement * stiffness - velocity * damping;
-        velocity += acceleration * dt;
-        let next = prev + velocity * dt;
-        if (Math.abs(targetRef.current - next) < 0.0006 && Math.abs(velocity) < 0.001) {
-          next = targetRef.current;
-          velocity = 0;
-        }
-        return Math.max(0, Math.min(1, next));
-      });
+      if (touchCommittedAt !== null) {
+        // Once a touch dive is committed, progress is a pure function of
+        // absolute elapsed time, not accumulated per-frame deltas. This
+        // matters because iOS Safari can deprioritize main-thread JS
+        // (including rAF-driven React state updates) for a stretch during
+        // an active touch gesture, while compositor-only animations - the
+        // turtle, the bubbles - keep running regardless. The old spring
+        // model clamped each simulated step to 50ms of "believed" time
+        // passed no matter how much real time actually elapsed, so after
+        // any stall it had to crawl through dozens of frames to catch up
+        // to reality - that crawl is what looked like a confusing second
+        // jump. Computing straight from wall-clock time means the very
+        // first frame that runs after a stall already shows the correct
+        // (possibly fully-complete) progress, instead of needing to catch up.
+        const elapsed = now - touchCommittedAt;
+        const t = Math.min(1, elapsed / TOUCH_DIVE_MS);
+        const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
+        setWaveProgress(eased);
+      } else {
+        const dt = Math.min((now - lastTime) / 1000, 0.05);
+        setWaveProgress((prev) => {
+          const displacement = targetRef.current - prev;
+          const acceleration = displacement * stiffness - velocity * damping;
+          velocity += acceleration * dt;
+          let next = prev + velocity * dt;
+          if (Math.abs(targetRef.current - next) < 0.0006 && Math.abs(velocity) < 0.001) {
+            next = targetRef.current;
+            velocity = 0;
+          }
+          return Math.max(0, Math.min(1, next));
+        });
+      }
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
