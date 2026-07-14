@@ -31,7 +31,11 @@ function washOutTarget() {
   return { opacity: 0, y: 46, x: 0, filter: 'blur(14px)' };
 }
 function washOutTransition(delaySec) {
-  return { duration: 0.45, delay: delaySec, ease: [0.4, 0, 1, 1] };
+  // Matches the crest's 1.6s dive (see WaveTransitionOverlay) - a slow,
+  // gentle dissolve rather than a quick snap, staggered so the topmost
+  // content (subtitle, scroll hint) washes away first, same as the water
+  // line reaching it first.
+  return { duration: 1, delay: delaySec, ease: [0.16, 1, 0.3, 1] };
 }
 
 export default function HeroSection({ wash = 0, onNavigate, autoPlay = false }) {
@@ -64,7 +68,7 @@ export default function HeroSection({ wash = 0, onNavigate, autoPlay = false }) 
               initial={{ opacity: 0, y: 20 }}
               animate={autoPlay ? washOutTarget() : { opacity: 1, y: 0 }}
               style={autoPlay ? undefined : name}
-              transition={autoPlay ? washOutTransition(0.05) : { duration: 0.8, delay: 0.5 }}
+              transition={autoPlay ? washOutTransition(0.15) : { duration: 0.8, delay: 0.5 }}
               className="text-5xl md:text-7xl lg:text-8xl font-light text-white tracking-tight mb-6"
             >
               Erin<br />
@@ -77,7 +81,7 @@ export default function HeroSection({ wash = 0, onNavigate, autoPlay = false }) 
               initial={{ opacity: 0 }}
               animate={autoPlay ? washOutTarget() : { opacity: 1 }}
               style={autoPlay ? undefined : desc}
-              transition={autoPlay ? washOutTransition(0.1) : { duration: 0.6, delay: 0.7 }}
+              transition={autoPlay ? washOutTransition(0.3) : { duration: 0.6, delay: 0.7 }}
               className="text-white/70 text-lg md:text-xl max-w-lg mx-auto lg:mx-0 leading-relaxed"
             >
               Building
@@ -91,7 +95,7 @@ export default function HeroSection({ wash = 0, onNavigate, autoPlay = false }) 
               initial={{ opacity: 0, y: 20 }}
               animate={autoPlay ? washOutTarget() : { opacity: 1, y: 0 }}
               style={autoPlay ? undefined : buttons}
-              transition={autoPlay ? washOutTransition(0.15) : { duration: 0.6, delay: 0.9 }}
+              transition={autoPlay ? washOutTransition(0.45) : { duration: 0.6, delay: 0.9 }}
               className="mt-8 flex flex-wrap gap-4 justify-center lg:justify-start"
             >
               <a
@@ -120,7 +124,7 @@ export default function HeroSection({ wash = 0, onNavigate, autoPlay = false }) 
             initial={{ opacity: 0, scale: 0.8 }}
             animate={autoPlay ? washOutTarget() : { opacity: 1, scale: 1 }}
             style={autoPlay ? undefined : skills}
-            transition={autoPlay ? washOutTransition(0.15) : { duration: 1, delay: 0.5 }}
+            transition={autoPlay ? washOutTransition(0.45) : { duration: 1, delay: 0.5 }}
             className="flex-shrink-0"
           >
             <OrbitingSkills />
