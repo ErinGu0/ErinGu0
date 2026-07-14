@@ -18,7 +18,23 @@ function washState(progress, start, end) {
   };
 }
 
-export default function HeroSection({ wash = 0, onNavigate }) {
+// autoPlay (touch) wash-out target/transition for a given element, keyed
+// by a stagger delay in seconds. Unlike the continuous wash* values below
+// (recomputed every render from a live `wash` number, which requires a
+// steady stream of React state updates - main-thread work that iOS can
+// stall during an active touch gesture), this is one declarative
+// animate() call using only compositor-safe properties (opacity, y via
+// transform, filter), triggered once and played out by the browser
+// independent of further JS - immune to that stall the same way the
+// sea creatures are.
+function washOutTarget() {
+  return { opacity: 0, y: 46, x: 0, filter: 'blur(14px)' };
+}
+function washOutTransition(delaySec) {
+  return { duration: 0.45, delay: delaySec, ease: [0.4, 0, 1, 1] };
+}
+
+export default function HeroSection({ wash = 0, onNavigate, autoPlay = false }) {
   const subtitle = washState(wash, 0, 0.16);
   const name = washState(wash, 0.08, 0.3);
   const desc = washState(wash, 0.2, 0.42);
@@ -36,9 +52,9 @@ export default function HeroSection({ wash = 0, onNavigate }) {
           <div className="text-center lg:text-left flex-1">
             <motion.p
               initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              style={subtitle}
-              transition={{ duration: 0.6, delay: 0.4 }}
+              animate={autoPlay ? washOutTarget() : { opacity: 1 }}
+              style={autoPlay ? undefined : subtitle}
+              transition={autoPlay ? washOutTransition(0) : { duration: 0.6, delay: 0.4 }}
               className="text-[#88C5CC] text-sm md:text-base tracking-[0.3em] uppercase mb-4 font-light"
             >
               Computer Science & Neuroscience @ UWaterloo
@@ -46,9 +62,9 @@ export default function HeroSection({ wash = 0, onNavigate }) {
 
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              style={name}
-              transition={{ duration: 0.8, delay: 0.5 }}
+              animate={autoPlay ? washOutTarget() : { opacity: 1, y: 0 }}
+              style={autoPlay ? undefined : name}
+              transition={autoPlay ? washOutTransition(0.05) : { duration: 0.8, delay: 0.5 }}
               className="text-5xl md:text-7xl lg:text-8xl font-light text-white tracking-tight mb-6"
             >
               Erin<br />
@@ -59,9 +75,9 @@ export default function HeroSection({ wash = 0, onNavigate }) {
 
             <motion.p
               initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              style={desc}
-              transition={{ duration: 0.6, delay: 0.7 }}
+              animate={autoPlay ? washOutTarget() : { opacity: 1 }}
+              style={autoPlay ? undefined : desc}
+              transition={autoPlay ? washOutTransition(0.1) : { duration: 0.6, delay: 0.7 }}
               className="text-white/70 text-lg md:text-xl max-w-lg mx-auto lg:mx-0 leading-relaxed"
             >
               Building
@@ -73,9 +89,9 @@ export default function HeroSection({ wash = 0, onNavigate }) {
 
             <motion.div
               initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              style={buttons}
-              transition={{ duration: 0.6, delay: 0.9 }}
+              animate={autoPlay ? washOutTarget() : { opacity: 1, y: 0 }}
+              style={autoPlay ? undefined : buttons}
+              transition={autoPlay ? washOutTransition(0.15) : { duration: 0.6, delay: 0.9 }}
               className="mt-8 flex flex-wrap gap-4 justify-center lg:justify-start"
             >
               <a
@@ -102,9 +118,9 @@ export default function HeroSection({ wash = 0, onNavigate }) {
           {/* Orbiting skills */}
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            style={skills}
-            transition={{ duration: 1, delay: 0.5 }}
+            animate={autoPlay ? washOutTarget() : { opacity: 1, scale: 1 }}
+            style={autoPlay ? undefined : skills}
+            transition={autoPlay ? washOutTransition(0.15) : { duration: 1, delay: 0.5 }}
             className="flex-shrink-0"
           >
             <OrbitingSkills />
@@ -115,9 +131,9 @@ export default function HeroSection({ wash = 0, onNavigate }) {
       {/* Scroll indicator */}
       <motion.div
         initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        style={scrollHint}
-        transition={{ delay: 1.5 }}
+        animate={autoPlay ? washOutTarget() : { opacity: 1 }}
+        style={autoPlay ? undefined : scrollHint}
+        transition={autoPlay ? washOutTransition(0) : { delay: 1.5 }}
         className="absolute bottom-8 left-1/2 -translate-x-1/2"
       >
         <motion.div

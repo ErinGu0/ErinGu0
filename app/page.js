@@ -309,18 +309,32 @@ export default function Home() {
   }, [introActive]);
 
   // Touch devices (phones/tablets) get a fundamentally different intro from
-  // desktop: the desktop version hijacks wheel events, which fire many
-  // discrete notches per gesture, so accumulating them into targetRef
-  // feels natural. A touch swipe only ever produces one gesture, so
-  // instead of tracking swipe distance or real scroll position (both
-  // tried before, both required multiple swipes and felt glitchy - a
-  // partial swipe froze the wave mid-crest, or a single swipe only
-  // physically covered part of the scroll distance needed), the very
-  // first meaningful touch movement now commits to the FULL dive:
-  // targetRef jumps straight to 1 and the spring below eases there on its
-  // own. Every touch event after that is just prevented (page stays
-  // locked, nothing else happens) until the animation finishes on its own
-  // and the lock releases - "one scroll down and it's done."
+  // desktop. `height` (what drives the wave's growth) is a layout property,
+  // which can only ever be animated on the main JS thread - no matter
+  // whether our own code, a CSS transition, or Framer drives it. iOS Safari
+  // deprioritizes main-thread JS for a stretch during an active touch
+  // gesture, while compositor-only animations elsewhere (the turtle, the
+  // bubbles - transform/opacity, which CAN run independent of the main
+  // thread) keep playing regardless. That's what caused the dive to stall
+  // and then snap straight to "done" without ever visibly completing - no
+  // amount of clever per-frame math can make a main-thread-bound property
+  // animate during a stretch where the main thread isn't running at all.
+  //
+  // So touch doesn't drive `waveProgress` continuously at all. The first
+  // meaningful touch movement just flips `autoPlay` to true once; from
+  // there, WaveTransitionOverlay and HeroSection each play a single
+  // declarative, compositor-driven (transform/opacity) animation with a
+  // fixed duration, which the browser executes independently of our JS -
+  // immune to the exact stall that broke the old approach. `onComplete`
+  // (Framer's real animation-finished callback, not our own polling) is
+  // what advances the intro once that plays out.
+  const [autoPlay, setAutoPlay] = useState(false);
+  const handleDiveComplete = () => {
+    setWaveProgress(1);
+    targetRef.current = 1;
+    setIntroActive(false);
+  };
+
   useEffect(() => {
     if (!scrollLocked) return undefined;
 
@@ -339,12 +353,6 @@ export default function Home() {
 
     let touchStartY = null;
     let touchCommitted = false;
-    // Wall-clock timestamp of commit, NOT a frame counter. See tick() below
-    // for why this matters: it's what makes completion immune to a stalled
-    // main thread instead of needing many frames to "catch up."
-    let touchCommittedAt = null;
-    const TOUCH_DIVE_MS = 750;
-
     const handleTouchStart = (e) => {
       touchStartY = e.touches[0].clientY;
     };
@@ -357,8 +365,7 @@ export default function Home() {
       // whole dive, but any real, deliberate swipe (a few pixels) does.
       if (touchStartY !== null && Math.abs(touchStartY - currentY) > 8) {
         touchCommitted = true;
-        touchCommittedAt = performance.now();
-        targetRef.current = 1; // read by the settle-completion check below
+        setAutoPlay(true);
       }
     };
 
@@ -370,7 +377,10 @@ export default function Home() {
     // Damped-spring integrator (frame-rate independent via dt) instead of a
     // flat per-frame lerp: gives the water actual inertia - it eases into
     // motion and settles without a hard per-frame ratio, which reads as
-    // noticeably smoother/more fluid than a fixed-percentage chase.
+    // noticeably smoother/more fluid than a fixed-percentage chase. Only
+    // drives the wheel path - once autoPlay is true, this keeps running
+    // harmlessly (targetRef is already 1) but the touch visuals are driven
+    // by WaveTransitionOverlay/HeroSection's own declarative animations.
     let velocity = 0;
     let lastTime = null;
     const stiffness = 100;
@@ -378,40 +388,20 @@ export default function Home() {
 
     const tick = (now) => {
       if (lastTime === null) lastTime = now;
+      const dt = Math.min((now - lastTime) / 1000, 0.05);
       lastTime = now;
 
-      if (touchCommittedAt !== null) {
-        // Once a touch dive is committed, progress is a pure function of
-        // absolute elapsed time, not accumulated per-frame deltas. This
-        // matters because iOS Safari can deprioritize main-thread JS
-        // (including rAF-driven React state updates) for a stretch during
-        // an active touch gesture, while compositor-only animations - the
-        // turtle, the bubbles - keep running regardless. The old spring
-        // model clamped each simulated step to 50ms of "believed" time
-        // passed no matter how much real time actually elapsed, so after
-        // any stall it had to crawl through dozens of frames to catch up
-        // to reality - that crawl is what looked like a confusing second
-        // jump. Computing straight from wall-clock time means the very
-        // first frame that runs after a stall already shows the correct
-        // (possibly fully-complete) progress, instead of needing to catch up.
-        const elapsed = now - touchCommittedAt;
-        const t = Math.min(1, elapsed / TOUCH_DIVE_MS);
-        const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
-        setWaveProgress(eased);
-      } else {
-        const dt = Math.min((now - lastTime) / 1000, 0.05);
-        setWaveProgress((prev) => {
-          const displacement = targetRef.current - prev;
-          const acceleration = displacement * stiffness - velocity * damping;
-          velocity += acceleration * dt;
-          let next = prev + velocity * dt;
-          if (Math.abs(targetRef.current - next) < 0.0006 && Math.abs(velocity) < 0.001) {
-            next = targetRef.current;
-            velocity = 0;
-          }
-          return Math.max(0, Math.min(1, next));
-        });
-      }
+      setWaveProgress((prev) => {
+        const displacement = targetRef.current - prev;
+        const acceleration = displacement * stiffness - velocity * damping;
+        velocity += acceleration * dt;
+        let next = prev + velocity * dt;
+        if (Math.abs(targetRef.current - next) < 0.0006 && Math.abs(velocity) < 0.001) {
+          next = targetRef.current;
+          velocity = 0;
+        }
+        return Math.max(0, Math.min(1, next));
+      });
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
@@ -667,9 +657,14 @@ export default function Home() {
             transition={{ duration: 0.7, ease: [0.6, 0.05, 0.15, 1] }}
           >
             <div className="fixed inset-0 z-10">
-              <HeroSection wash={waveProgress} onNavigate={handleNavigate} />
+              <HeroSection wash={waveProgress} onNavigate={handleNavigate} autoPlay={autoPlay} />
             </div>
-            <WaveTransitionOverlay progress={waveProgress} complete={waveProgress >= 0.995} />
+            <WaveTransitionOverlay
+              progress={waveProgress}
+              complete={waveProgress >= 0.995}
+              autoPlay={autoPlay}
+              onComplete={handleDiveComplete}
+            />
           </motion.div>
         )}
       </AnimatePresence>
