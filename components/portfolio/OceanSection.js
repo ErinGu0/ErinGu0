@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { FishSVG, TurtleSVG } from './SeaCreatures';
+import { FishSVG, TurtleSVG, JellyfishSVG, MantaSVG, SeahorseSVG, Swimmer } from './SeaCreatures';
 
 // Deterministic pseudo-random generator so particle layout is identical on
 // server and client render (Math.random() during render causes a React
@@ -15,7 +15,162 @@ function seeded(seed) {
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 }
 
-export default function OceanSection({ children, className = "", id }) {
+// A jellyfish rising slowly through a section - vertical drift with a
+// gentle horizontal sway, restarting from below.
+function DriftingJelly({ left, size, duration, delay, opacity = 0.3, glow }) {
+  return (
+    <motion.div
+      className="absolute"
+      style={{ left, bottom: '-12%' }}
+      animate={{ y: ['0%', '-160%'] }}
+      transition={{ duration, repeat: Infinity, ease: 'linear', delay }}
+    >
+      <motion.div
+        style={{ opacity }}
+        animate={{ x: [0, 14, -10, 0], rotate: [-4, 4, -4] }}
+        transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }}
+      >
+        <JellyfishSVG size={size} glow={glow} />
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// The sea bed itself: soft dark sand-dune silhouettes settling along the
+// bottom of the floor section, with a faint cool glow resting on them.
+function SeaFloorBed() {
+  return (
+    <div className="absolute inset-x-0 bottom-0 pointer-events-none" style={{ height: 180 }}>
+      <svg className="absolute inset-x-0 bottom-0 w-full h-full" viewBox="0 0 1440 180" preserveAspectRatio="none">
+        <path
+          d="M0,110 C180,90 340,125 520,105 C700,88 880,120 1060,102 C1240,86 1360,112 1440,100 L1440,180 L0,180 Z"
+          fill="rgba(5,25,32,0.7)"
+        />
+        <path
+          d="M0,140 C220,124 420,152 640,136 C860,122 1080,150 1300,134 C1360,130 1410,136 1440,132 L1440,180 L0,180 Z"
+          fill="rgba(2,14,19,0.85)"
+        />
+      </svg>
+      {/* faint moonlight-through-water glow resting on the dunes */}
+      <div
+        className="absolute inset-x-0 bottom-10 h-16"
+        style={{
+          background: 'radial-gradient(ellipse 50% 100% at 50% 100%, rgba(94,234,255,0.07) 0%, transparent 70%)',
+        }}
+      />
+    </div>
+  );
+}
+
+// Depth-specific supporting cast layered behind the content. The water gets
+// stranger and more luminous the deeper the page goes.
+function DepthCast({ depth }) {
+  if (depth === 'mid') {
+    return (
+      <>
+        <Swimmer top="14%" duration={90} delay={-25} direction="right" bob={10} bobDuration={8} wiggle={2} opacity={0.22}>
+          <MantaSVG size={72} />
+        </Swimmer>
+        <Swimmer top="48%" duration={58} delay={-18} direction="left" bob={6} bobDuration={4.5} wiggle={4} opacity={0.24} sparkle>
+          <div className="relative" style={{ transform: 'scaleX(-1)' }}>
+            <FishSVG size={22} />
+            <div className="absolute" style={{ left: -24, top: 9 }}><FishSVG size={17} /></div>
+            <div className="absolute" style={{ left: -13, top: -11 }}><FishSVG size={14} /></div>
+          </div>
+        </Swimmer>
+        <DriftingJelly left="12%" size={30} duration={46} delay={-14} opacity={0.3} glow="rgba(94,234,255,0.4)" />
+        <DriftingJelly left="70%" size={24} duration={54} delay={-30} opacity={0.26} glow="rgba(167,243,255,0.35)" />
+      </>
+    );
+  }
+  if (depth === 'deep') {
+    return (
+      <>
+        <DriftingJelly left="8%" size={38} duration={40} delay={-8} opacity={0.38} glow="rgba(94,234,255,0.5)" />
+        <DriftingJelly left="84%" size={26} duration={52} delay={-30} opacity={0.3} glow="rgba(167,243,255,0.45)" />
+        <DriftingJelly left="44%" size={20} duration={60} delay={-18} opacity={0.24} glow="rgba(94,234,255,0.4)" />
+        <Swimmer top="34%" duration={70} delay={-20} direction="left" bob={5} bobDuration={6} wiggle={3} opacity={0.2}>
+          <div style={{ transform: 'scaleX(-1)' }}>
+            <SeahorseSVG size={26} />
+          </div>
+        </Swimmer>
+        <Swimmer top="72%" duration={100} delay={-45} direction="right" bob={8} bobDuration={9} wiggle={2} opacity={0.16}>
+          <MantaSVG size={56} />
+        </Swimmer>
+      </>
+    );
+  }
+  // 'floor' (the sea bed): no animals at all - just the sparkle field
+  // rendered separately.
+  return null;
+}
+
+// Twinkling bioluminescent plankton - the glittery starfield of the deep
+// sea. Every depth band gets some; the sea floor gets the densest, most
+// magical version, complete with tiny four-point star glints.
+function BioGlitter({ count = 26, stars = 0 }) {
+  return (
+    <div className="absolute inset-0 pointer-events-none">
+      {[...Array(stars)].map((_, i) => {
+        const s1 = seeded(i + 3101);
+        const s2 = seeded(i + 3201);
+        const s3 = seeded(i + 3301);
+        return (
+          <motion.svg
+            key={`star-${i}`}
+            className="absolute"
+            style={{ left: `${s1 * 100}%`, top: `${s2 * 100}%` }}
+            width={8 + s3 * 10}
+            height={8 + s3 * 10}
+            viewBox="-10 -10 20 20"
+            animate={{ opacity: [0, 0.9, 0], scale: [0.3, 1, 0.3], rotate: [0, 60] }}
+            transition={{ duration: 3.5 + s3 * 3, repeat: Infinity, delay: s1 * 8, ease: 'easeInOut' }}
+          >
+            <path
+              d="M0,-9 C0.7,-2.5 2.5,-0.7 9,0 C2.5,0.7 0.7,2.5 0,9 C-0.7,2.5 -2.5,0.7 -9,0 C-2.5,-0.7 -0.7,-2.5 0,-9 Z"
+              fill="rgba(167,243,255,0.9)"
+            />
+            <circle cx="0" cy="0" r="2" fill="rgba(255,255,255,0.9)" style={{ filter: 'blur(1px)' }} />
+          </motion.svg>
+        );
+      })}
+      {[...Array(count)].map((_, i) => {
+        const a1 = seeded(i + 2101);
+        const a2 = seeded(i + 2201);
+        const a3 = seeded(i + 2301);
+        const a4 = seeded(i + 2401);
+        const size = 1.5 + a3 * 2.5;
+        return (
+          <motion.div
+            key={`bio-${i}`}
+            className="absolute rounded-full"
+            style={{
+              left: `${a1 * 100}%`,
+              top: `${a2 * 100}%`,
+              width: size,
+              height: size,
+              background: a4 > 0.5 ? '#5EEAFF' : '#A7F3FF',
+              boxShadow: `0 0 ${6 + a3 * 8}px rgba(94,234,255,0.8)`,
+            }}
+            animate={{
+              opacity: [0, 0.9, 0],
+              scale: [0.3, 1.2, 0.3],
+              y: [0, -(6 + a4 * 14)],
+            }}
+            transition={{
+              duration: 3 + a3 * 4,
+              repeat: Infinity,
+              delay: a1 * 7,
+              ease: 'easeInOut',
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+export default function OceanSection({ children, className = "", id, depth }) {
   const ref = useRef(null);
   const { scrollYProgress } = useScroll({
     target: ref,
@@ -48,7 +203,10 @@ export default function OceanSection({ children, className = "", id }) {
       />
 
       {/* Faint undulating boundary where this depth band begins - reads
-          like light catching a layer of water at the top of the section */}
+          like light catching a layer of water at the top of the section.
+          Skipped on the sea floor: down there the water should just fade
+          seamlessly into the bed, not show a bright banding line. */}
+      {depth !== 'floor' && (
       <svg
         className="absolute top-0 left-0 w-full pointer-events-none"
         style={{ height: '90px' }}
@@ -80,9 +238,14 @@ export default function OceanSection({ children, className = "", id }) {
           transition={{ duration: 17, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
         />
       </svg>
+      )}
 
-      {/* A lone fish and a distant turtle drifting through this depth band */}
+      {/* A lone fish and a distant turtle drifting through this depth band,
+          plus the depth-specific cast (mantas, jellies, seahorses...).
+          The sea floor ('floor') stays creature-free - only sparkles. */}
+      {depth !== 'floor' && (
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <DepthCast depth={depth} />
         <motion.div
           className="absolute left-0"
           style={{ top: '26%' }}
@@ -114,6 +277,7 @@ export default function OceanSection({ children, className = "", id }) {
           </motion.div>
         </motion.div>
       </div>
+      )}
 
       {/* Parallax background particles */}
       <motion.div
@@ -190,8 +354,15 @@ export default function OceanSection({ children, className = "", id }) {
         })}
       </motion.div>
 
+      {/* Bioluminescent glitter at every depth; the sea floor gets the
+          densest, prettiest field with star glints */}
+      {depth === 'floor' ? <BioGlitter count={40} stars={10} /> : depth ? <BioGlitter count={18} /> : null}
+
+      {/* The sand dunes of the sea bed, only at the very bottom */}
+      {depth === 'floor' && <SeaFloorBed />}
+
       {/* Content with parallax */}
-      <motion.div 
+      <motion.div
         className="relative z-10"
         style={{ opacity }}
       >

@@ -1,7 +1,29 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { BrainCircuit, Users, HeartPulse, Accessibility } from 'lucide-react';
-import SeaCreatures from './SeaCreatures';
+import SeaCreatures, { StarfishSVG } from './SeaCreatures';
+
+// A tiny four-point star glint - the sparkle you see when sunlight catches
+// moving water. Pure CSS/SVG, twinkles in place.
+function SunGlint({ left, top, size, delay, duration }) {
+  return (
+    <motion.svg
+      className="absolute pointer-events-none"
+      style={{ left, top }}
+      width={size}
+      height={size}
+      viewBox="-10 -10 20 20"
+      animate={{ opacity: [0, 1, 0], scale: [0.3, 1, 0.3], rotate: [0, 45, 90] }}
+      transition={{ duration, repeat: Infinity, delay, ease: 'easeInOut' }}
+    >
+      <path
+        d="M0,-9 C0.8,-2.5 2.5,-0.8 9,0 C2.5,0.8 0.8,2.5 0,9 C-0.8,2.5 -2.5,0.8 -9,0 C-2.5,-0.8 -0.8,-2.5 0,-9 Z"
+        fill="rgba(255,255,255,0.95)"
+      />
+      <circle cx="0" cy="0" r="2.2" fill="rgba(255,250,230,0.9)" style={{ filter: 'blur(1px)' }} />
+    </motion.svg>
+  );
+}
 
 const socialGoodBadges = [
   { label: 'Artificial Intelligence for Good', icon: BrainCircuit, left: '54%', top: '72%', duration: 9 },
@@ -23,11 +45,92 @@ function seeded(seed) {
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 }
 
+// --- Rolling wave paths ---------------------------------------------------
+// The old wave layers animated between two hand-drawn shapes and back
+// (A -> B -> A), which reads as water breathing in place - it visibly
+// decelerates to a stop at each extreme before reversing. Real swells don't
+// pause and reverse, they roll continuously in one direction. So instead
+// each layer here is a fixed sine silhouette; only its *phase* advances,
+// sampled at even steps and looped with linear easing so the motion never
+// slows down or snaps - the same trick real-time water shaders use.
+const VB_WIDTH = 1440;
+const VB_HEIGHT = 800;
+
+function catmullRomToBezierPath(points) {
+  let d = `M${points[0][0].toFixed(1)},${points[0][1].toFixed(1)}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i - 1] || points[i];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[i + 2] || p2;
+    const c1x = p1[0] + (p2[0] - p0[0]) / 6;
+    const c1y = p1[1] + (p2[1] - p0[1]) / 6;
+    const c2x = p2[0] - (p3[0] - p1[0]) / 6;
+    const c2y = p2[1] - (p3[1] - p1[1]) / 6;
+    d += ` C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
+  }
+  return d;
+}
+
+function swellPath({ baseY, amplitude, wavelength, phaseDeg, closed = true }) {
+  const phase = (phaseDeg * Math.PI) / 180;
+  const numWaves = VB_WIDTH / wavelength;
+  const steps = Math.max(8, Math.round(numWaves * 8));
+  const pts = [];
+  for (let i = 0; i <= steps; i++) {
+    const x = (VB_WIDTH / steps) * i;
+    const y = baseY + amplitude * Math.sin((2 * Math.PI * x) / wavelength + phase);
+    pts.push([x, y]);
+  }
+  const curve = catmullRomToBezierPath(pts);
+  return closed ? `${curve} L${VB_WIDTH},${VB_HEIGHT} L0,${VB_HEIGHT} Z` : curve;
+}
+
+// Six evenly-spaced phases, plus a final frame identical to the first. With
+// repeat: Infinity, the wrap from that last frame back to the start is just
+// another equal-length linear step (300deg -> 360deg/0deg) - so the loop
+// has no seam and nothing to visibly "reset".
+function rollingWave(config) {
+  const steps = 6;
+  const frames = [];
+  for (let i = 0; i < steps; i++) {
+    frames.push(swellPath({ ...config, phaseDeg: (360 / steps) * i }));
+  }
+  frames.push(frames[0]);
+  return frames;
+}
+
+const rollTransition = (duration) => ({ duration, repeat: Infinity, ease: 'linear' });
+
+// A distant, barely-moving ridge behind the big swell - one more layer of
+// depth so the water reads as receding toward a horizon rather than
+// stopping at the first swell.
+const HORIZON_D = rollingWave({ baseY: 284, amplitude: 18, wavelength: 720 });
+const BIG_SWELL_D = rollingWave({ baseY: 315, amplitude: 45, wavelength: 480 });
+const TEAL_DEEP_D = rollingWave({ baseY: 450, amplitude: 12, wavelength: 720 });
+const TURQUOISE_D = rollingWave({ baseY: 400, amplitude: 30, wavelength: 480 });
+const BRIGHT_SURFACE_D = rollingWave({ baseY: 365, amplitude: 25, wavelength: 480 });
+const FOAM_CRASH_D = rollingWave({ baseY: 370, amplitude: 20, wavelength: 360 });
+const FOAM_CREST_LINE_D = rollingWave({ baseY: 370, amplitude: 20, wavelength: 360, closed: false });
+const SECOND_CREST_D = rollingWave({ baseY: 365, amplitude: 25, wavelength: 480, closed: false });
+const SANDY_BEACH_D = rollingWave({ baseY: 650, amplitude: 8, wavelength: 720 });
+const WET_SAND_D = rollingWave({ baseY: 703, amplitude: 8, wavelength: 720 });
+const LACY_FOAM_D = rollingWave({ baseY: 650, amplitude: 10, wavelength: 360, closed: false });
+
 export default function WaveBackground() {
   return (
     <div className="absolute inset-0 overflow-hidden">
-      {/* Lighter ocean gradient base to match inspiration */}
+      {/* Lighter ocean gradient base, warmed at the top like a sunlit
+          lagoon - the peach band reads as sky/sunlight meeting the water */}
       <div className="absolute inset-0 bg-gradient-to-b from-[#1A6B7A] via-[#2A8A9A] to-[#3AA5B5]" />
+      <div
+        className="absolute inset-x-0 top-0 h-[40%] pointer-events-none"
+        style={{
+          background:
+            'linear-gradient(180deg, rgba(255,214,170,0.20) 0%, rgba(255,236,200,0.10) 35%, transparent 100%)',
+          mixBlendMode: 'screen',
+        }}
+      />
 
       {/* Sunlight breaking through the surface - soft glow + god rays */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -66,81 +169,163 @@ export default function WaveBackground() {
         ))}
       </div>
 
-      {/* Realistic animated wave layers */}
+      {/* Realistic animated wave layers - each is a fixed sine silhouette
+          that rolls forward as its phase advances, so the water reads as
+          continuously flowing rather than pulsing in place */}
       <svg
         className="absolute bottom-0 w-full h-[75%]"
         viewBox="0 0 1440 800"
         preserveAspectRatio="none"
         xmlns="http://www.w3.org/2000/svg"
       >
+        <defs>
+          <radialGradient id="travelGlintG" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.6)" />
+            <stop offset="55%" stopColor="rgba(255,255,255,0.14)" />
+            <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+          </radialGradient>
+          {/* Vertical glosses for the main body layers - a lighter catch
+              of light along each swell's crest fading into its base tone,
+              so the layers read as glassy and dimensional rather than
+              flat washes of colour. userSpaceOnUse pins them to the
+              viewBox regardless of how a given path's "d" morphs. */}
+          <linearGradient id="waveGradHorizon" gradientUnits="userSpaceOnUse" x1="0" y1="230" x2="0" y2="500">
+            <stop offset="0%" stopColor="rgba(52,132,150,0.30)" />
+            <stop offset="100%" stopColor="rgba(14,70,84,0.22)" />
+          </linearGradient>
+          <linearGradient id="waveGradSwell" gradientUnits="userSpaceOnUse" x1="0" y1="260" x2="0" y2="560">
+            <stop offset="0%" stopColor="rgba(64,158,174,0.55)" />
+            <stop offset="100%" stopColor="rgba(22,95,110,0.42)" />
+          </linearGradient>
+          <linearGradient id="waveGradTeal" gradientUnits="userSpaceOnUse" x1="0" y1="420" x2="0" y2="650">
+            <stop offset="0%" stopColor="rgba(88,186,201,0.65)" />
+            <stop offset="100%" stopColor="rgba(35,120,136,0.68)" />
+          </linearGradient>
+          <linearGradient id="waveGradTurquoise" gradientUnits="userSpaceOnUse" x1="0" y1="360" x2="0" y2="580">
+            <stop offset="0%" stopColor="rgba(168,232,240,0.62)" />
+            <stop offset="100%" stopColor="rgba(72,168,184,0.55)" />
+          </linearGradient>
+          <linearGradient id="waveGradSurface" gradientUnits="userSpaceOnUse" x1="0" y1="330" x2="0" y2="520">
+            <stop offset="0%" stopColor="rgba(232,252,255,0.65)" />
+            <stop offset="100%" stopColor="rgba(136,207,219,0.42)" />
+          </linearGradient>
+        </defs>
+
+        {/* Distant hazy ridge - the furthest layer back, barely moving,
+            giving the water somewhere to recede to instead of stopping
+            abruptly at the first swell */}
+        <motion.path
+          initial={{ d: HORIZON_D[0] }}
+          animate={{ d: HORIZON_D }}
+          transition={rollTransition(34)}
+          fill="url(#waveGradHorizon)"
+        />
+
+        {/* Big slow rolling swell far behind - the long-period wave real
+            surf rides on top of */}
+        <motion.path
+          initial={{ d: BIG_SWELL_D[0] }}
+          animate={{ d: BIG_SWELL_D }}
+          transition={rollTransition(20)}
+          fill="url(#waveGradSwell)"
+        />
+
         {/* Teal deep water layer */}
         <motion.path
-          initial={{ d: "M0,450 Q360,430 720,450 T1440,450 L1440,800 L0,800 Z" }}
-          animate={{
-            d: [
-              "M0,450 Q360,430 720,450 T1440,450 L1440,800 L0,800 Z",
-              "M0,460 Q360,480 720,460 T1440,460 L1440,800 L0,800 Z",
-              "M0,450 Q360,430 720,450 T1440,450 L1440,800 L0,800 Z"
-            ]
-          }}
-          transition={{ duration: 16, repeat: Infinity, ease: "easeInOut" }}
-          fill="rgba(42, 138, 154, 0.7)"
+          initial={{ d: TEAL_DEEP_D[0] }}
+          animate={{ d: TEAL_DEEP_D }}
+          transition={rollTransition(16)}
+          fill="url(#waveGradTeal)"
         />
-        
+
         {/* Turquoise mid-depth wave */}
         <motion.path
-          initial={{ d: "M0,400 C240,370 360,430 600,400 C840,370 1080,430 1320,400 C1380,390 1410,395 1440,400 L1440,800 L0,800 Z" }}
-          animate={{
-            d: [
-              "M0,400 C240,370 360,430 600,400 C840,370 1080,430 1320,400 C1380,390 1410,395 1440,400 L1440,800 L0,800 Z",
-              "M0,415 C240,445 360,385 600,415 C840,445 1080,385 1320,415 C1380,425 1410,420 1440,415 L1440,800 L0,800 Z",
-              "M0,400 C240,370 360,430 600,400 C840,370 1080,430 1320,400 C1380,390 1410,395 1440,400 L1440,800 L0,800 Z"
-            ]
-          }}
-          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-          fill="rgba(88, 182, 199, 0.6)"
+          initial={{ d: TURQUOISE_D[0] }}
+          animate={{ d: TURQUOISE_D }}
+          transition={rollTransition(12)}
+          fill="url(#waveGradTurquoise)"
         />
-        
+
         {/* Bright surface wave with white caps */}
         <motion.path
-          initial={{ d: "M0,350 C180,330 240,380 420,360 C600,340 720,390 900,370 C1080,350 1260,400 1440,380 L1440,800 L0,800 Z" }}
-          animate={{
-            d: [
-              "M0,350 C180,330 240,380 420,360 C600,340 720,390 900,370 C1080,350 1260,400 1440,380 L1440,800 L0,800 Z",
-              "M0,365 C180,385 240,335 420,355 C600,375 720,325 900,345 C1080,365 1260,315 1440,335 L1440,800 L0,800 Z",
-              "M0,350 C180,330 240,380 420,360 C600,340 720,390 900,370 C1080,350 1260,400 1440,380 L1440,800 L0,800 Z"
-            ]
-          }}
-          transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
-          fill="rgba(136, 207, 219, 0.5)"
+          initial={{ d: BRIGHT_SURFACE_D[0] }}
+          animate={{ d: BRIGHT_SURFACE_D }}
+          transition={rollTransition(9)}
+          fill="url(#waveGradSurface)"
         />
-        
+
         {/* White foam/crash layer */}
         <motion.path
-          initial={{ d: "M0,370 C120,350 180,390 300,370 C420,350 540,390 660,370 C780,350 900,390 1020,370 C1140,350 1260,390 1380,370 C1410,365 1425,367 1440,370 L1440,800 L0,800 Z" }}
-          animate={{
-            d: [
-              "M0,370 C120,350 180,390 300,370 C420,350 540,390 660,370 C780,350 900,390 1020,370 C1140,350 1260,390 1380,370 C1410,365 1425,367 1440,370 L1440,800 L0,800 Z",
-              "M0,385 C120,405 180,365 300,385 C420,405 540,365 660,385 C780,405 900,365 1020,385 C1140,405 1260,365 1380,385 C1410,390 1425,388 1440,385 L1440,800 L0,800 Z",
-              "M0,370 C120,350 180,390 300,370 C420,350 540,390 660,370 C780,350 900,390 1020,370 C1140,350 1260,390 1380,370 C1410,365 1425,367 1440,370 L1440,800 L0,800 Z"
-            ]
-          }}
-          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+          initial={{ d: FOAM_CRASH_D[0] }}
+          animate={{ d: FOAM_CRASH_D }}
+          transition={rollTransition(6)}
           fill="rgba(255, 255, 255, 0.25)"
         />
-        
+
+        {/* Bright foam crest line riding exactly along the breaking edge -
+            this is what makes it read as a real wave face, not a shape */}
+        <motion.path
+          initial={{ d: FOAM_CREST_LINE_D[0] }}
+          animate={{ d: FOAM_CREST_LINE_D }}
+          transition={rollTransition(6)}
+          fill="none"
+          stroke="rgba(255,255,255,0.7)"
+          strokeWidth="5"
+          strokeLinecap="round"
+          style={{ filter: 'blur(2.5px)' }}
+        />
+
+        {/* Softer secondary crest on the mid swell behind it */}
+        <motion.path
+          initial={{ d: SECOND_CREST_D[0] }}
+          animate={{ d: SECOND_CREST_D }}
+          transition={rollTransition(9)}
+          fill="none"
+          stroke="rgba(255,255,255,0.35)"
+          strokeWidth="3"
+          strokeLinecap="round"
+          style={{ filter: 'blur(3px)' }}
+        />
+
+        {/* A band of light sliding across the surface, the way a sun
+            glint travels across real moving water */}
+        <motion.ellipse
+          cy="368"
+          rx="260"
+          ry="34"
+          fill="url(#travelGlintG)"
+          style={{ mixBlendMode: 'screen', filter: 'blur(6px)' }}
+          initial={{ cx: -260, opacity: 0 }}
+          animate={{ cx: [-260, 1700], opacity: [0, 0.6, 0.6, 0] }}
+          transition={{ duration: 14, repeat: Infinity, ease: 'linear', times: [0, 0.18, 0.82, 1] }}
+        />
+
         {/* Sandy beach transition - beige/tan */}
         <motion.path
-          initial={{ d: "M0,650 Q360,640 720,650 T1440,650 L1440,800 L0,800 Z" }}
-          animate={{
-            d: [
-              "M0,650 Q360,640 720,650 T1440,650 L1440,800 L0,800 Z",
-              "M0,655 Q360,645 720,655 T1440,655 L1440,800 L0,800 Z",
-              "M0,650 Q360,640 720,650 T1440,650 L1440,800 L0,800 Z"
-            ]
-          }}
-          transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
+          initial={{ d: SANDY_BEACH_D[0] }}
+          animate={{ d: SANDY_BEACH_D }}
+          transition={rollTransition(18)}
           fill="rgba(210, 180, 140, 0.4)"
+        />
+
+        {/* Warm wet-sand band deepening toward the bottom edge */}
+        <motion.path
+          initial={{ d: WET_SAND_D[0] }}
+          animate={{ d: WET_SAND_D }}
+          transition={rollTransition(20)}
+          fill="rgba(228, 196, 150, 0.35)"
+        />
+
+        {/* Lacy foam line where the surf meets the sand */}
+        <motion.path
+          initial={{ d: LACY_FOAM_D[0] }}
+          animate={{ d: LACY_FOAM_D }}
+          transition={rollTransition(8)}
+          fill="none"
+          stroke="rgba(255,255,255,0.45)"
+          strokeWidth="4"
+          strokeLinecap="round"
+          style={{ filter: 'blur(3px)' }}
         />
       </svg>
       
@@ -209,6 +394,32 @@ export default function WaveBackground() {
           />
         );
       })}
+
+      {/* Sun glitter - four-point star sparkles where light catches the
+          moving water, the "diamonds on the sea" effect */}
+      {[...Array(14)].map((_, i) => {
+        const g1 = seeded(i + 1201);
+        const g2 = seeded(i + 1301);
+        const g3 = seeded(i + 1401);
+        return (
+          <SunGlint
+            key={`glint-${i}`}
+            left={`${4 + g1 * 92}%`}
+            top={`${42 + g2 * 26}%`}
+            size={8 + g3 * 12}
+            delay={g1 * 6}
+            duration={2.5 + g2 * 2.5}
+          />
+        );
+      })}
+
+      {/* Beach details resting on the sand */}
+      <div className="absolute pointer-events-none" style={{ left: '12%', bottom: '6%', transform: 'rotate(-12deg)' }}>
+        <StarfishSVG size={30} />
+      </div>
+      <div className="absolute pointer-events-none hidden md:block" style={{ left: '72%', bottom: '3%', transform: 'rotate(18deg)' }}>
+        <StarfishSVG size={22} tint="rgba(245,230,211,0.55)" />
+      </div>
 
       {/* Sea life drifting through the water and along the sand */}
       <SeaCreatures />

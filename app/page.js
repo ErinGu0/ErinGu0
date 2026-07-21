@@ -37,6 +37,54 @@ function unlockPageScroll() {
   window.scrollTo(0, scrollY ? -parseInt(scrollY, 10) : 0);
 }
 
+// The accent line under every section heading. Used to be a plain flat
+// gradient bar - which, sitting alone against the ocean background, read
+// as a stray line rather than a deliberate light effect. Committing to
+// that "glow" idea properly: an actual blurred glow layer behind a crisp
+// core line, a shimmer that runs along it, and a soft pulsing center
+// glint - the same light-catching-water language as SunGlint and the sea
+// creatures' Glints elsewhere on the page.
+function SectionDivider({ className = '' }) {
+  return (
+    <motion.div
+      className={`relative w-36 h-2 mx-auto ${className}`}
+      initial={{ scaleX: 0, opacity: 0 }}
+      whileInView={{ scaleX: 1, opacity: 1 }}
+      viewport={{ once: true }}
+      transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
+    >
+      <div
+        className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-3"
+        style={{ background: 'linear-gradient(90deg, transparent, rgba(94,234,255,0.6), transparent)', filter: 'blur(5px)' }}
+      />
+      <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-gradient-to-r from-transparent via-[#5EEAFF] to-transparent" />
+      {/* Travels only within the bar's own width (0 -> container width
+          minus its own), and is fully transparent at both ends of the
+          sweep - so the instant jump back to the start on repeat happens
+          while invisible, instead of visibly overshooting past the bar
+          and snapping back mid-flight. */}
+      <motion.div
+        className="absolute top-1/2 -translate-y-1/2 left-0 w-10 h-1.5 rounded-full"
+        style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.95), transparent)', filter: 'blur(1.5px)' }}
+        animate={{ x: [0, 104], opacity: [0, 1, 1, 0] }}
+        transition={{
+          duration: 2.6,
+          repeat: Infinity,
+          repeatDelay: 1.6,
+          x: { duration: 2.6, ease: 'easeInOut' },
+          opacity: { duration: 2.6, times: [0, 0.15, 0.85, 1], ease: 'easeInOut' },
+        }}
+      />
+      <motion.div
+        className="absolute left-1/2 top-1/2 w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full bg-white"
+        style={{ boxShadow: '0 0 8px rgba(94,234,255,0.9)' }}
+        animate={{ opacity: [0.5, 1, 0.5], scale: [0.8, 1.25, 0.8] }}
+        transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+      />
+    </motion.div>
+  );
+}
+
 const experiences = [
   {
     title: 'AI Automation Developer',
@@ -154,15 +202,15 @@ const projects = [
 // instead, since those are naturally out of view until the user scrolls.
 const revealContainer = {
   hidden: {},
-  visible: { transition: { staggerChildren: 0.1, delayChildren: 0.05 } }
+  visible: { transition: { staggerChildren: 0.06 } }
 };
 const revealItem = {
-  hidden: { opacity: 0, y: 28, filter: 'blur(14px)' },
+  hidden: { opacity: 0, y: 22, filter: 'blur(10px)' },
   visible: {
     opacity: 1,
     y: 0,
     filter: 'blur(0px)',
-    transition: { duration: 0.65, ease: [0.16, 1, 0.3, 1] }
+    transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] }
   }
 };
 
@@ -189,13 +237,7 @@ function EducationSectionContent() {
     <div className="max-w-6xl mx-auto px-6">
       <motion.div {...fadeUp(0)} className="text-center mb-16">
         <h2 className="text-4xl md:text-5xl font-light text-white mb-4">Education & Qualifications</h2>
-        <motion.div
-          className="w-32 h-1 bg-gradient-to-r from-transparent via-[#5EEAFF] to-transparent mx-auto"
-          initial={{ scaleX: 0, opacity: 0 }}
-          whileInView={{ scaleX: 1, opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
-        />
+        <SectionDivider />
       </motion.div>
 
       <motion.div {...fadeUp(0.05)} className="mb-12">
@@ -349,17 +391,19 @@ export default function Home() {
   useEffect(() => {
     if (!scrollLocked) return undefined;
 
+    // Desktop now uses the same one-shot dive as touch: the first downward
+    // wheel tick triggers a single declarative, compositor-driven descent
+    // (scaleY + opacity) that the browser plays out on its own. Scrubbing
+    // the wave up/down against live wheel deltas - however well smoothed -
+    // always risked reading as glitchy: momentum spikes, direction
+    // reversals, and stalls all showed up directly in the water. One
+    // committed, fixed-duration play-through is the smoothest possible
+    // version of this moment.
     const handleWheel = (e) => {
       e.preventDefault();
       lastWheelAtRef.current = performance.now();
       if (!introActiveRef.current) return; // post-wave settle window: swallow input only
-
-      // Firefox reports deltaY in "lines" (small integers like 1-3) while
-      // Chrome/Edge report pixels (~100 per notch) - without normalizing,
-      // the wave barely moves per scroll in Firefox, which feels broken.
-      const pixelDelta = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
-      const delta = Math.max(-100, Math.min(100, pixelDelta)) * 0.0014;
-      targetRef.current = Math.max(0, Math.min(1, targetRef.current + delta));
+      if (e.deltaY > 0) setAutoPlay(true);
     };
 
     let touchStartY = null;
@@ -385,43 +429,12 @@ export default function Home() {
     window.addEventListener('touchstart', handleTouchStart, { passive: true });
     window.addEventListener('touchmove', handleTouchMove, { passive: false });
 
-    // Damped-spring integrator (frame-rate independent via dt) instead of a
-    // flat per-frame lerp: gives the water actual inertia - it eases into
-    // motion and settles without a hard per-frame ratio, which reads as
-    // noticeably smoother/more fluid than a fixed-percentage chase. Only
-    // drives the wheel path - once autoPlay is true, this keeps running
-    // harmlessly (targetRef is already 1) but the touch visuals are driven
-    // by WaveTransitionOverlay/HeroSection's own declarative animations.
-    let velocity = 0;
-    let lastTime = null;
-    const stiffness = 100;
-    const damping = 20; // critically damped for stiffness=100, mass=1 - settles without overshoot/bounce
-
-    const tick = (now) => {
-      if (lastTime === null) lastTime = now;
-      const dt = Math.min((now - lastTime) / 1000, 0.05);
-      lastTime = now;
-
-      setWaveProgress((prev) => {
-        const displacement = targetRef.current - prev;
-        const acceleration = displacement * stiffness - velocity * damping;
-        velocity += acceleration * dt;
-        let next = prev + velocity * dt;
-        if (Math.abs(targetRef.current - next) < 0.0006 && Math.abs(velocity) < 0.001) {
-          next = targetRef.current;
-          velocity = 0;
-        }
-        return Math.max(0, Math.min(1, next));
-      });
-      rafRef.current = requestAnimationFrame(tick);
-    };
-    rafRef.current = requestAnimationFrame(tick);
-
+    // No per-frame progress integrator anymore: both input types trigger
+    // the same one-shot declarative dive, so there's nothing to scrub.
     return () => {
       window.removeEventListener('wheel', handleWheel);
       window.removeEventListener('touchstart', handleTouchStart);
       window.removeEventListener('touchmove', handleTouchMove);
-      cancelAnimationFrame(rafRef.current);
     };
   }, [scrollLocked]);
 
@@ -516,7 +529,7 @@ export default function Home() {
       <BubbleCursor />
       <Navigation onNavigate={handleNavigate} />
 
-      <section id="experience" className="pt-24 pb-32 bg-gradient-to-b from-[#0D6B82] via-[#0A5A6E] to-[#084858]">
+      <OceanSection id="experience" depth="mid" className="pt-24 pb-32 bg-gradient-to-b from-[#0D6B82] via-[#0A5A6E] to-[#084858]">
         <motion.div
           className="max-w-4xl mx-auto px-6 relative z-10"
           variants={revealContainer}
@@ -525,13 +538,7 @@ export default function Home() {
         >
           <motion.div variants={revealItem} className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-light text-white mb-4">Experience & Research</h2>
-            <motion.div
-          className="w-32 h-1 bg-gradient-to-r from-transparent via-[#5EEAFF] to-transparent mx-auto"
-          initial={{ scaleX: 0, opacity: 0 }}
-          whileInView={{ scaleX: 1, opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
-        />
+            <SectionDivider />
           </motion.div>
 
           <div className="relative">
@@ -546,9 +553,9 @@ export default function Home() {
             </div>
           </div>
         </motion.div>
-      </section>
+      </OceanSection>
 
-      <OceanSection id="projects" className="py-32 bg-gradient-to-b from-[#084858] via-[#063845] to-[#052D38]">
+      <OceanSection id="projects" depth="mid" className="py-32 bg-gradient-to-b from-[#084858] via-[#063845] to-[#052D38]">
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -558,13 +565,7 @@ export default function Home() {
             className="text-center mb-16"
           >
             <h2 className="text-4xl md:text-5xl font-light text-white mb-4">Featured Projects</h2>
-            <motion.div
-          className="w-32 h-1 bg-gradient-to-r from-transparent via-[#5EEAFF] to-transparent mx-auto"
-          initial={{ scaleX: 0, opacity: 0 }}
-          whileInView={{ scaleX: 1, opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
-        />
+            <SectionDivider />
           </motion.div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -583,11 +584,11 @@ export default function Home() {
         </div>
       </OceanSection>
 
-      <OceanSection id="about" className="py-32 bg-gradient-to-b from-[#052D38] via-[#042530] to-[#031F29]">
+      <OceanSection id="about" depth="deep" className="py-32 bg-gradient-to-b from-[#052D38] via-[#042530] to-[#031F29]">
         <EducationSectionContent />
       </OceanSection>
 
-      <OceanSection id="contact" className="py-32 bg-gradient-to-b from-[#031F29] via-[#021820] to-[#01141A]">
+      <OceanSection id="contact" depth="floor" className="py-32 bg-gradient-to-b from-[#031F29] via-[#021820] to-[#01141A]">
         <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -596,13 +597,7 @@ export default function Home() {
             transition={{ duration: 0.8 }}
           >
             <h2 className="text-4xl md:text-5xl font-light text-white mb-4">Let's Connect</h2>
-            <motion.div
-              className="w-32 h-1 bg-gradient-to-r from-transparent via-[#5EEAFF] to-transparent mx-auto mb-8"
-              initial={{ scaleX: 0, opacity: 0 }}
-              whileInView={{ scaleX: 1, opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
-            />
+            <SectionDivider className="mb-8" />
 
             <p className="text-white/70 text-lg mb-12 max-w-2xl mx-auto leading-relaxed">
               I'm passionate about leveraging technology to create meaningful impact in healthcare, education, and beyond.
@@ -680,6 +675,7 @@ export default function Home() {
               autoPlay={autoPlay}
               onComplete={handleDiveComplete}
             />
+
           </motion.div>
         )}
       </AnimatePresence>

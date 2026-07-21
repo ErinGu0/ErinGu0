@@ -55,20 +55,20 @@ export default function HeroSection({ wash = 0, onNavigate, autoPlay = false }) 
           {/* Text content */}
           <div className="text-center lg:text-left flex-1">
             <motion.p
-              initial={{ opacity: 0 }}
-              animate={autoPlay ? washOutTarget() : { opacity: 1 }}
+              initial={{ opacity: 0, y: 14 }}
+              animate={autoPlay ? washOutTarget() : { opacity: 1, y: 0 }}
               style={autoPlay ? undefined : subtitle}
-              transition={autoPlay ? washOutTransition(0) : { duration: 0.6, delay: 0.4 }}
+              transition={autoPlay ? washOutTransition(0) : { duration: 0.45, delay: 0.15 }}
               className="text-[#88C5CC] text-sm md:text-base tracking-[0.3em] uppercase mb-4 font-light"
             >
               Computer Science & Neuroscience @ UWaterloo
             </motion.p>
 
             <motion.h1
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 30 }}
               animate={autoPlay ? washOutTarget() : { opacity: 1, y: 0 }}
               style={autoPlay ? undefined : name}
-              transition={autoPlay ? washOutTransition(0.4) : { duration: 0.8, delay: 0.5 }}
+              transition={autoPlay ? washOutTransition(0.4) : { duration: 0.6, delay: 0.28 }}
               className="text-5xl md:text-7xl lg:text-8xl font-light text-white tracking-tight mb-6"
             >
               Erin<br />
@@ -78,10 +78,10 @@ export default function HeroSection({ wash = 0, onNavigate, autoPlay = false }) 
             </motion.h1>
 
             <motion.p
-              initial={{ opacity: 0 }}
-              animate={autoPlay ? washOutTarget() : { opacity: 1 }}
+              initial={{ opacity: 0, y: 14 }}
+              animate={autoPlay ? washOutTarget() : { opacity: 1, y: 0 }}
               style={autoPlay ? undefined : desc}
-              transition={autoPlay ? washOutTransition(0.8) : { duration: 0.6, delay: 0.7 }}
+              transition={autoPlay ? washOutTransition(0.8) : { duration: 0.45, delay: 0.4 }}
               className="text-white/70 text-lg md:text-xl max-w-lg mx-auto lg:mx-0 leading-relaxed"
             >
               Building
@@ -92,10 +92,10 @@ export default function HeroSection({ wash = 0, onNavigate, autoPlay = false }) 
             </motion.p>
 
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 28 }}
               animate={autoPlay ? washOutTarget() : { opacity: 1, y: 0 }}
               style={autoPlay ? undefined : buttons}
-              transition={autoPlay ? washOutTransition(1.2) : { duration: 0.6, delay: 0.9 }}
+              transition={autoPlay ? washOutTransition(1.2) : { duration: 0.45, delay: 0.5 }}
               className="mt-8 flex flex-wrap gap-4 justify-center lg:justify-start"
             >
               <a
@@ -121,10 +121,10 @@ export default function HeroSection({ wash = 0, onNavigate, autoPlay = false }) 
 
           {/* Orbiting skills */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={autoPlay ? washOutTarget() : { opacity: 1, scale: 1 }}
+            initial={{ opacity: 0, scale: 0.8, y: 16 }}
+            animate={autoPlay ? washOutTarget() : { opacity: 1, scale: 1, y: 0 }}
             style={autoPlay ? undefined : skills}
-            transition={autoPlay ? washOutTransition(1.2) : { duration: 1, delay: 0.5 }}
+            transition={autoPlay ? washOutTransition(1.2) : { duration: 0.7, delay: 0.3 }}
             className="flex-shrink-0"
           >
             <OrbitingSkills />
@@ -132,22 +132,50 @@ export default function HeroSection({ wash = 0, onNavigate, autoPlay = false }) 
         </div>
       </div>
 
-      {/* Scroll indicator */}
+      {/* Scroll indicator - a glowing "dive in" invitation that's hard to
+          miss: shimmering label, mouse capsule with a falling dot, and a
+          cascade of chevrons sinking like bubbles in reverse */}
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={autoPlay ? washOutTarget() : { opacity: 1 }}
+        initial={{ opacity: 0, y: 10 }}
+        animate={autoPlay ? washOutTarget() : { opacity: 1, y: 0 }}
         style={autoPlay ? undefined : scrollHint}
-        transition={autoPlay ? washOutTransition(0) : { delay: 1.5 }}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2"
+        transition={autoPlay ? washOutTransition(0) : { duration: 0.5, delay: 0.85 }}
+        className="absolute bottom-7 left-1/2 -translate-x-1/2"
       >
-        <motion.div
-          animate={{ y: [0, 8, 0] }}
-          transition={{ duration: 2, repeat: Infinity }}
-          className="flex flex-col items-center gap-2 text-white/40"
-        >
-          <span className="text-xs tracking-widest">SCROLL TO DIVE IN</span>
-          <ChevronDown className="w-5 h-5" />
-        </motion.div>
+        <div className="relative flex flex-col items-center gap-2.5">
+          {/* soft pulsing glow behind the whole cue */}
+          <motion.div
+            className="absolute -inset-6 rounded-full pointer-events-none"
+            style={{ background: 'radial-gradient(circle, rgba(94,234,255,0.22) 0%, transparent 70%)', filter: 'blur(10px)' }}
+            animate={{ opacity: [0.4, 0.9, 0.4], scale: [0.9, 1.1, 0.9] }}
+            transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+          />
+
+          <motion.span
+            animate={{ y: [0, 6, 0], backgroundPosition: ['0% 50%', '200% 50%'] }}
+            transition={{
+              y: { duration: 2, repeat: Infinity, ease: 'easeInOut' },
+              backgroundPosition: { duration: 3, repeat: Infinity, ease: 'linear' },
+            }}
+            className="text-xs md:text-sm tracking-[0.35em] font-medium bg-gradient-to-r from-white/70 via-[#5EEAFF] to-white/70 bg-clip-text text-transparent"
+            style={{ backgroundSize: '200% 100%' }}
+          >
+            SCROLL TO DIVE IN
+          </motion.span>
+
+          {/* cascading chevrons */}
+          <div className="flex flex-col items-center -space-y-2.5">
+            {[0, 1, 2].map((i) => (
+              <motion.div
+                key={i}
+                animate={{ opacity: [0.1, 0.9, 0.1], y: [0, 4, 8] }}
+                transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.2, ease: 'easeInOut' }}
+              >
+                <ChevronDown className="w-5 h-5 text-[#5EEAFF]" />
+              </motion.div>
+            ))}
+          </div>
+        </div>
       </motion.div>
     </section>
   );
